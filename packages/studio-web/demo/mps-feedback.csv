@@ -1,0 +1,7 @@
+date,cohort,type,text
+2026-07-18,toll-operator,pain_point,We lose thousands of ₹5 events a day when ANPR diagnosis never lands in Toll.OS orchestration
+2026-07-18,concessionaire,pain_point,LiDAR exception-lane events drop before metering — Bosch MPS never invoices those
+2026-07-19,toll-operator,feature_request,RFID FASTag and ANPR must fuse into one billable orchestration event at ₹5
+2026-07-19,3pl,pain_point,Our 3PL StaaS inventory is still yesterday's when we release the afternoon dock wave
+2026-07-20,logistics,feature_request,Need near-real-time StaaS stock for logistics warehouses not retail store sync
+2026-07-20,warehouse,churn_risk,Outbound planners rework loads every morning because StaaS 3PL counts are late

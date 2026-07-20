@@ -1,0 +1,29 @@
+[
+  {
+    "label": "Toll.OS MLFF events not metered for Bosch MPS ₹5/event revenue",
+    "description": "On Toll.OS Multi-Lane Free Flow corridors, billable orchestration events — ANPR plate diagnosis, RFID FASTag reads, and LiDAR exception handling — are recorded inconsistently, so Bosch MPS cannot reliably bill the contracted ₹5 per event.",
+    "cohorts": ["toll-operator", "concessionaire"],
+    "signalCount": 42,
+    "importanceScore": 0.96,
+    "tags": ["Toll.OS", "MLFF", "orchestration"],
+    "trend": "growing",
+    "quotes": [
+      "We lose thousands of ₹5 events a day when ANPR diagnosis never lands in Toll.OS orchestration.",
+      "LiDAR exception-lane events drop before metering — Bosch MPS never invoices those.",
+      "RFID FASTag and ANPR must fuse into one billable orchestration event at ₹5."
+    ]
+  },
+  {
+    "label": "StaaS 3PL warehouse inventory lag breaks outbound dock planning",
+    "description": "Third-party logistics (3PL) customers on MPS Store-as-a-Service for logistics see warehouse inventory and ASN updates lag 4–12 hours, so outbound dock schedules are built on stale stock.",
+    "cohorts": ["3pl", "logistics"],
+    "signalCount": 16,
+    "importanceScore": 0.78,
+    "tags": ["StaaS", "3PL", "logistics"],
+    "trend": "growing",
+    "quotes": [
+      "Our 3PL StaaS inventory is still yesterday's when we release the afternoon dock wave.",
+      "Need near-real-time StaaS stock for logistics warehouses, not retail store sync."
+    ]
+  }
+]

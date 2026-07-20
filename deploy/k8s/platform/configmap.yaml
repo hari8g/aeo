@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: avp
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: avp-config
+  namespace: avp
+data:
+  nats-url: "nats://nats.avp.svc.cluster.local:4222"
+  log-level: "info"
+  otel-endpoint: "http://jaeger.monitoring.svc.cluster.local:4318"

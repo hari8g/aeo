@@ -1,0 +1,39 @@
+# Pipeline agent Job template — substitute gitSha / runId / cycleId at apply time.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: avp-devsecops-example
+  namespace: avp
+spec:
+  ttlSecondsAfterFinished: 3600
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: devsecops-agent
+          image: avp/pipeline-agents:latest
+          command: ["avp-agent", "devsecops"]
+          args:
+            - "--repo-path"
+            - "/workspace"
+            - "--git-sha"
+            - "REPLACE_GIT_SHA"
+            - "--run-id"
+            - "REPLACE_RUN_ID"
+            - "--cycle-id"
+            - "REPLACE_CYCLE_ID"
+          env:
+            - name: AVP_PLATFORM_URL
+              value: http://avp-platform.avp.svc.cluster.local:7070
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: avp-secrets
+                  key: anthropic-api-key
+          volumeMounts:
+            - name: workspace
+              mountPath: /workspace
+      volumes:
+        - name: workspace
+          persistentVolumeClaim:
+            claimName: workspace-pvc

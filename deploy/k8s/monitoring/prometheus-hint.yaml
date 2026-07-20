@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: avp-prometheus-scrape
+  namespace: avp
+data:
+  scrape-hint: "Platform metrics are exposed on Service avp-platform:9464/metrics"

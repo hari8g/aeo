@@ -1,0 +1,15 @@
+{
+  "name": "avp",
+  "private": true,
+  "scripts": {
+    "dev": "docker compose up -d && turbo run dev",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "db:migrate": "pnpm -F @avp/platform db:migrate"
+  },
+  "devDependencies": {
+    "turbo": "^2.1.0",
+    "typescript": "^5.5.0",
+    "@types/node": "^20.0.0"
+  }
+}

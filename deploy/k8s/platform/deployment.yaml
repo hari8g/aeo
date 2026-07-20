@@ -1,0 +1,103 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: avp-platform
+  namespace: avp
+  labels:
+    app: avp-platform
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: avp-platform
+  template:
+    metadata:
+      labels:
+        app: avp-platform
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9464"
+    spec:
+      containers:
+        - name: avp-platform
+          image: avp/platform:latest
+          ports:
+            - name: http
+              containerPort: 7070
+            - name: metrics
+              containerPort: 9464
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: DB_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: avp-secrets
+                  key: db-host
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: avp-secrets
+                  key: db-password
+            - name: REDIS_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: avp-secrets
+                  key: redis-host
+            - name: NATS_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: avp-config
+                  key: nats-url
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: avp-secrets
+                  key: anthropic-api-key
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://jaeger:4318
+            - name: KEY_DIR
+              value: /secrets/keys
+          volumeMounts:
+            - name: jwt-keys
+              mountPath: /secrets/keys
+              readOnly: true
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 7070
+            initialDelaySeconds: 15
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 7070
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 500m
+              memory: 512Mi
+            limits:
+              cpu: "2"
+              memory: 2Gi
+      volumes:
+        - name: jwt-keys
+          secret:
+            secretName: avp-jwt-keys
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: avp-platform
+  namespace: avp
+spec:
+  selector:
+    app: avp-platform
+  ports:
+    - name: http
+      port: 7070
+      targetPort: 7070
+    - name: metrics
+      port: 9464
+      targetPort: 9464
