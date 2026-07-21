@@ -10,7 +10,7 @@ import { v4 as uuid } from 'uuid'
 import { join } from 'node:path'
 import { homedir } from 'node:os'
 import { initPool, migrate, query, queryOne } from './db/pool.js'
-import { initRedis } from './memory/redisMemory.js'
+import { initRedis, isRedisUsingMemoryFallback } from './memory/redisMemory.js'
 import { PostgresEpisodicMemory } from './memory/episodicMemory.js'
 import { ContextBus } from './bus/contextBus.js'
 import { JwtService } from './auth/jwtService.js'
@@ -105,7 +105,8 @@ async function start(): Promise<void> {
     ts: Date.now(),
     llm: await llm.isAvailable(),
     db: true,
-    redis: true,
+    redis: !isRedisUsingMemoryFallback(),
+    redisMode: isRedisUsingMemoryFallback() ? 'memory' : 'redis',
     nats: bus.isConnected(),
   }))
 

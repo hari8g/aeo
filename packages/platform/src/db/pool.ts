@@ -13,12 +13,15 @@ export function getPool(): pg.Pool {
 }
 
 export async function initPool(): Promise<pg.Pool> {
+  const sslMode = (process.env.DB_SSL ?? process.env.PGSSLMODE ?? '').toLowerCase()
+  const useSsl = sslMode === 'require' || sslMode === 'true' || sslMode === '1'
   pool = new pg.Pool({
     host: process.env.DB_HOST ?? 'localhost',
     port: parseInt(process.env.DB_PORT ?? '5433', 10),
     database: process.env.DB_NAME ?? 'avp',
     user: process.env.DB_USER ?? 'avp',
     password: process.env.DB_PASSWORD ?? 'avp_dev_password',
+    ssl: useSsl ? { rejectUnauthorized: false } : undefined,
     max: 20,
     idleTimeoutMillis: 30_000,
   })
