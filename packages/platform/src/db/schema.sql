@@ -1,17 +1,25 @@
 -- AVP Platform schema (Step 3)
 -- Idempotent: safe to re-run via migrate / server startup
+-- Works with plain local Postgres (no Docker / no pgvector required for Studio demo).
 
-CREATE EXTENSION IF NOT EXISTS vector;
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
+-- Optional: enable when pgvector is installed (Docker image / Neon). Ignored on plain Windows Postgres.
+DO $$ BEGIN
+  CREATE EXTENSION IF NOT EXISTS vector;
+EXCEPTION WHEN OTHERS THEN
+  RAISE NOTICE 'pgvector not installed — continuing without vector extension (OK for local Studio demo)';
+END $$;
+
 -- Knowledge graph nodes
+-- embedding is JSONB so plain Postgres works; pgvector-backed installs can still store arrays as JSON.
 CREATE TABLE IF NOT EXISTS graph_nodes (
   id               SERIAL PRIMARY KEY,
   kind             TEXT NOT NULL,
   label            TEXT NOT NULL,
   description      TEXT,
   metadata         JSONB DEFAULT '{}',
-  embedding        vector(1536),
+  embedding        JSONB,
   written_by_agent TEXT,
   trace_id         TEXT,
   workspace_id     TEXT NOT NULL DEFAULT 'default',
@@ -23,9 +31,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS graph_nodes_workspace_kind_label_uidx
   ON graph_nodes (workspace_id, kind, label);
 CREATE INDEX IF NOT EXISTS graph_nodes_kind_idx ON graph_nodes (kind);
 CREATE INDEX IF NOT EXISTS graph_nodes_workspace_kind_idx ON graph_nodes (workspace_id, kind);
-CREATE INDEX IF NOT EXISTS graph_nodes_embedding_hnsw_idx
-  ON graph_nodes USING hnsw (embedding vector_cosine_ops)
-  WHERE embedding IS NOT NULL;
 
 -- Knowledge graph edges
 CREATE TABLE IF NOT EXISTS graph_edges (

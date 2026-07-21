@@ -17,7 +17,8 @@ export async function initPool(): Promise<pg.Pool> {
   const useSsl = sslMode === 'require' || sslMode === 'true' || sslMode === '1'
   pool = new pg.Pool({
     host: process.env.DB_HOST ?? 'localhost',
-    port: parseInt(process.env.DB_PORT ?? '5433', 10),
+    // Prefer DB_PORT; default 5432 for local Postgres. Docker Compose maps host 5433.
+    port: parseInt(process.env.DB_PORT ?? '5432', 10),
     database: process.env.DB_NAME ?? 'avp',
     user: process.env.DB_USER ?? 'avp',
     password: process.env.DB_PASSWORD ?? 'avp_dev_password',

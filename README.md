@@ -25,13 +25,26 @@ Most “AI for product” demos stop at chat. AEO models the **whole product lif
 
 - Node.js 20+  
 - [pnpm](https://pnpm.io) 9.x  
-- Docker (Postgres on **5433**, NATS, Redis, MinIO — see `deploy/docker`)  
+- **Postgres** (local install **or** Docker). Redis/NATS optional for Studio demo.  
 
-### 1. Infrastructure
+### 1. Database (pick one)
+
+**A) Local Postgres (Windows / no Docker)**
+
+```powershell
+# From repo root — creates role avp / db avp and writes packages/platform/.env
+.\deploy\local-postgres\setup.ps1 -PgPassword "YOUR_POSTGRES_SUPERUSER_PASSWORD"
+```
+
+Defaults: `localhost:5432`, user/password `avp` / `avp_dev_password`.  
+If `psql` is not on PATH, add e.g. `C:\Program Files\PostgreSQL\16\bin`.
+
+**B) Docker Compose**
 
 ```bash
 cd deploy/docker
 docker compose up -d
+# Then set DB_PORT=5433 in packages/platform/.env (see .env.example)
 ```
 
 ### 2. Install & seed
@@ -39,7 +52,6 @@ docker compose up -d
 ```bash
 pnpm install
 pnpm -F @avp/shared build
-# Build agents as needed, or:
 pnpm -r --filter './packages/agents/**' build
 pnpm -F @avp/platform build
 pnpm -F @avp/platform db:seed
