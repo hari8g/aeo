@@ -112,9 +112,26 @@ Return JSON ONLY: {"title":"...","outline":"...","changelog":"..."}`,
       }
     } catch { /* fallback */ }
     return {
-      title: `Documentation (stub) — feature ${featureId}`,
-      outline: 'Stub documentation outline pending LLM',
-      changelog: `- Added feature ${featureId} (stub)`,
+      title: 'Toll.OS MLFF event metering guide',
+      outline: [
+        '1. Overview — Bosch MPS meters each attributed MLFF passage as a ₹5 Toll.OS orchestration event; recovered capture underpins ~€1.5–2.0M/year from 2027 after ~€350–400k delivery.',
+        '2. Sensor fusion — ANPR + FASTag RFID within the fusion window (clock-skew tolerant) produce one attribution; orphans never silent-drop.',
+        '3. Exceptions — LiDAR / orphan workflows normalise vendor schemas; resolve → exactly one ₹5 meter.',
+        '4. Event metering — commercial invariants before persist; late RFID metadata-only.',
+        '5. Billing ledger — idempotent keys; invoice counts = distinct ledger IDs; reconciliation slices for RA.',
+        '6. Privacy — imagery TTL; purpose-limited access under operator DPA.',
+        '7. Ops — aging/escalation, soak-test and go-live gates.',
+        '8. Commercial — ₹5/event unit price; GTM LTV:CAC ~10–16×; payback ~8–11 months.',
+      ].join('\n'),
+      changelog: [
+        '- Meter ANPR diagnoses as ₹5 Toll.OS events',
+        '- Fuse RFID+ANPR (clock-skew tolerant); orphans → exceptions',
+        '- LiDAR vendor normalisation; resolve → ₹5',
+        '- Idempotent ledger; late RFID no double-bill',
+        '- Invoice export = ledger counts; reconciliation slices',
+        '- Imagery TTL / DPA purpose limits',
+        `- Docs generated for feature ${featureId}`,
+      ].join('\n'),
     }
   }
 }

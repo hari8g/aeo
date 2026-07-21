@@ -18,7 +18,16 @@ export function formatMoneyRange(
   high: number,
   currency = 'INR',
   period = 'year',
+  startYear?: number | null,
 ): string {
+  const start =
+    startYear && Number.isFinite(startYear) ? ` starting from ${Math.round(startYear)}` : ''
+
+  // Large amounts read better compact (€350K / €1.5M) than full locale digits
+  if (Math.max(Math.abs(low), Math.abs(high)) >= 100_000) {
+    return `${formatMoneyCompact(low, currency)} – ${formatMoneyCompact(high, currency)} / ${period}${start}`
+  }
+
   try {
     const locale = currency === 'INR' ? 'en-IN' : currency === 'EUR' ? 'en-IE' : 'en-US'
     const fmt = new Intl.NumberFormat(locale, {
@@ -26,8 +35,8 @@ export function formatMoneyRange(
       currency,
       maximumFractionDigits: 0,
     })
-    return `${fmt.format(low)} – ${fmt.format(high)} / ${period}`
+    return `${fmt.format(low)} – ${fmt.format(high)} / ${period}${start}`
   } catch {
-    return `${formatMoneyCompact(low, currency)}–${formatMoneyCompact(high, currency)} / ${period}`
+    return `${formatMoneyCompact(low, currency)}–${formatMoneyCompact(high, currency)} / ${period}${start}`
   }
 }

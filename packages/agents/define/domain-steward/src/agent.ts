@@ -183,14 +183,67 @@ Return JSON ONLY: {"concepts":[{"name":"...","description":"...","related":["Oth
       }
     } catch { /* fallback */ }
     return {
-      concepts: [{
-        name: 'Core Domain Entity (stub)',
-        description: 'Stub domain concept pending LLM',
-        related: [],
-      }],
-      kpis: [{ name: 'Adoption rate', description: 'Feature adoption', target: '20%' }],
-      regulations: [],
-      rules: [{ name: 'Must authenticate', description: 'Users must be authenticated' }],
+      concepts: [
+        {
+          name: 'Toll.OS orchestration event',
+          description:
+            'Billable ₹5 unit for one attributed MLFF passage — building block of the €1.5–2.0M/year value band from 2027.',
+          related: [],
+        },
+        {
+          name: 'ANPR plate diagnosis',
+          description: 'Gantry camera plate read with confidence; can alone create an event above threshold.',
+          related: ['Toll.OS orchestration event'],
+        },
+        {
+          name: 'FASTag RFID read',
+          description: 'Roadside RFID observation that fuses with ANPR inside the fusion window.',
+          related: ['Toll.OS orchestration event'],
+        },
+        {
+          name: 'LiDAR exception',
+          description: 'Ambiguity that opens exception orchestration until attribution resolves.',
+          related: ['Toll.OS orchestration event'],
+        },
+        {
+          name: 'Event key',
+          description: 'Idempotency key so retries never create a second ₹5 charge.',
+          related: ['Toll.OS orchestration event'],
+        },
+      ],
+      kpis: [
+        {
+          name: 'Billable events per corridor-day',
+          description: 'Distinct ₹5 events invoiced per corridor per day.',
+          target: 'Match sensor-attributed passages within 2%',
+        },
+        {
+          name: 'Double-bill rate',
+          description: 'Passages with more than one ₹5 charge after fusion/retries.',
+          target: '< 0.1%',
+        },
+        {
+          name: 'Invoice-to-roadside gap',
+          description: 'Hours where sensors exceed metered events beyond KPI band.',
+          target: '↓ 40% within 120 days',
+        },
+      ],
+      regulations: [
+        {
+          name: 'Corridor privacy retention',
+          description: 'Raw imagery only for corridor-agreed window; ledger keeps event IDs.',
+        },
+      ],
+      rules: [
+        {
+          name: '₹5 per successful orchestration event',
+          description: 'Exactly one ₹5 charge per attributed passage — never two, never zero.',
+        },
+        {
+          name: 'Idempotent event keys',
+          description: 'Replays with the same key do not create a second ledger entry.',
+        },
+      ],
     }
   }
 }

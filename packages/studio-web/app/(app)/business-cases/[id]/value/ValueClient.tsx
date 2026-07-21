@@ -20,6 +20,7 @@ type ValueData = {
   valueHigh?: number
   valueCurrency?: string
   valuePeriod?: string
+  valueStartYear?: number
   confidence?: number
   assumptions?: string[]
   hypotheses?: Hypothesis[]
@@ -172,6 +173,7 @@ export default function ValueClient({ id, canEdit }: { id: string; canEdit: bool
   const low = Number(data.valueLow ?? 0)
   const high = Number(data.valueHigh ?? 0)
   const period = data.valuePeriod || 'year'
+  const startYear = data.valueStartYear != null ? Number(data.valueStartYear) : null
   const assumptions = data.assumptions ?? []
   const hypotheses = data.hypotheses ?? []
 
@@ -186,13 +188,13 @@ export default function ValueClient({ id, canEdit }: { id: string; canEdit: bool
       <div className="bg-white border border-line rounded-xl3 overflow-hidden">
         <div className="px-5 py-4 border-b border-line">
           <h2 className="text-[16px] font-extrabold text-ink-1">What this is worth</h2>
-          <p className="text-[13.5px] text-ink-2 mt-1">{data.executiveSummary}</p>
+          <p className="text-[13.5px] text-ink-2 mt-1 whitespace-pre-wrap">{data.executiveSummary}</p>
         </div>
 
         <div className="px-5 py-5">
           <div className="text-center py-6 border-b border-line mb-6">
             <div className="text-3xl font-extrabold tracking-tight text-ink-1">
-              {formatMoneyRange(low, high, data.valueCurrency ?? 'EUR', period)}
+              {formatMoneyRange(low, high, data.valueCurrency ?? 'EUR', period, startYear)}
             </div>
             <ConfidenceBadge pct={Number(data.confidence ?? 0)} />
           </div>

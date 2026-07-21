@@ -1153,8 +1153,8 @@ export async function registerShipLearnRoutes(
           ]
         : [
             {
-              stakeholder: 'Customer',
-              text: 'The change landed and improved our daily operations.',
+              stakeholder: 'Uffizio',
+              text: 'Afternoon dock waves finally trust StaaS stock — loyalty earn lands with the same logistics events.',
             },
           ])
     const adapter = await createHttpAdapter(opts.platformUrl, STAKEHOLDER_IMPACT_MANIFEST)

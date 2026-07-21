@@ -3,14 +3,24 @@
 import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 import EditableField from '@/components/EditableField'
-import SegmentCard from '@/components/SegmentCard'
+import SegmentCard, { type Segment } from '@/components/SegmentCard'
+import { formatMoneyCompact, formatMoneyRange } from '@/lib/format'
 
-type Segment = {
-  name: string
-  size: string
-  fit: string
-  cac: string
-  ltv: string
+type GtmEconomics = {
+  currency?: string
+  valueBandLow?: number
+  valueBandHigh?: number
+  valueStartYear?: number
+  deliveryCostLow?: number
+  deliveryCostHigh?: number
+  blendedCacLow?: number
+  blendedCacHigh?: number
+  blendedLtvLow?: number
+  blendedLtvHigh?: number
+  paybackMonthsLow?: number
+  paybackMonthsHigh?: number
+  ltvCacRatio?: string
+  narrative?: string
 }
 
 type GtmData = {
@@ -18,6 +28,7 @@ type GtmData = {
   segments?: Segment[]
   go_to_market?: string
   competitive_differentiation?: string
+  economics?: GtmEconomics
 }
 
 type Detail = {
@@ -163,6 +174,7 @@ export default function GtmClient({ id, canEdit }: { id: string; canEdit: boolea
 
   const data = detail.projection.data
   const segments = data.segments ?? []
+  const econ = data.economics
 
   return (
     <>
@@ -185,9 +197,73 @@ export default function GtmClient({ id, canEdit }: { id: string; canEdit: boolea
         </div>
 
         <div className="px-5 py-5 space-y-6">
+          {econ && (
+            <div>
+              <h4 className="text-sm font-bold text-ink-1 mb-3">Unit economics at a glance</h4>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
+                <div className="rounded-xl2 border border-line bg-surface-2 px-3 py-3">
+                  <div className="text-[10px] font-bold uppercase tracking-wide text-ink-3 mb-1">
+                    Blended CAC
+                  </div>
+                  <div className="text-[15px] font-extrabold text-ink-1">
+                    {formatMoneyCompact(Number(econ.blendedCacLow), econ.currency ?? 'EUR')} –{' '}
+                    {formatMoneyCompact(Number(econ.blendedCacHigh), econ.currency ?? 'EUR')}
+                  </div>
+                </div>
+                <div className="rounded-xl2 border border-line bg-surface-2 px-3 py-3">
+                  <div className="text-[10px] font-bold uppercase tracking-wide text-ink-3 mb-1">
+                    Blended LTV
+                  </div>
+                  <div className="text-[15px] font-extrabold text-ink-1">
+                    {formatMoneyCompact(Number(econ.blendedLtvLow), econ.currency ?? 'EUR')} –{' '}
+                    {formatMoneyCompact(Number(econ.blendedLtvHigh), econ.currency ?? 'EUR')}
+                  </div>
+                </div>
+                <div className="rounded-xl2 border border-line bg-surface-2 px-3 py-3">
+                  <div className="text-[10px] font-bold uppercase tracking-wide text-ink-3 mb-1">
+                    Payback
+                  </div>
+                  <div className="text-[15px] font-extrabold text-ink-1">
+                    {econ.paybackMonthsLow}–{econ.paybackMonthsHigh} mo
+                  </div>
+                </div>
+                <div className="rounded-xl2 border border-line bg-surface-2 px-3 py-3">
+                  <div className="text-[10px] font-bold uppercase tracking-wide text-ink-3 mb-1">
+                    LTV : CAC
+                  </div>
+                  <div className="text-[15px] font-extrabold text-ink-1">
+                    {econ.ltvCacRatio ?? '—'}
+                  </div>
+                </div>
+              </div>
+              {(econ.valueBandLow != null || econ.deliveryCostLow != null) && (
+                <p className="text-[12.5px] text-ink-3 mb-2">
+                  Anchored to value{' '}
+                  {econ.valueBandLow != null && econ.valueBandHigh != null
+                    ? formatMoneyRange(
+                        Number(econ.valueBandLow),
+                        Number(econ.valueBandHigh),
+                        econ.currency ?? 'EUR',
+                        'year',
+                        econ.valueStartYear,
+                      )
+                    : '—'}
+                  {econ.deliveryCostLow != null && econ.deliveryCostHigh != null
+                    ? ` · delivery ${formatMoneyCompact(Number(econ.deliveryCostLow), econ.currency ?? 'EUR')} – ${formatMoneyCompact(Number(econ.deliveryCostHigh), econ.currency ?? 'EUR')}`
+                    : ''}
+                </p>
+              )}
+              {econ.narrative && (
+                <p className="text-[13px] text-ink-2 leading-relaxed whitespace-pre-wrap">
+                  {econ.narrative}
+                </p>
+              )}
+            </div>
+          )}
+
           <div>
             <h4 className="text-sm font-bold text-ink-1 mb-3">Who this is for</h4>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3">
               {segments.map((seg, i) => (
                 <SegmentCard key={i} segment={seg} />
               ))}
@@ -196,12 +272,14 @@ export default function GtmClient({ id, canEdit }: { id: string; canEdit: boolea
 
           <div>
             <h4 className="text-sm font-bold text-ink-1 mb-2">How we&apos;d reach them</h4>
-            <p className="text-[13px] text-ink-2 leading-relaxed">{data.go_to_market}</p>
+            <p className="text-[13px] text-ink-2 leading-relaxed whitespace-pre-wrap">
+              {data.go_to_market}
+            </p>
           </div>
 
           <div>
             <h4 className="text-sm font-bold text-ink-1 mb-2">What makes this different</h4>
-            <p className="text-[13px] text-ink-2 leading-relaxed">
+            <p className="text-[13px] text-ink-2 leading-relaxed whitespace-pre-wrap">
               {data.competitive_differentiation}
             </p>
           </div>

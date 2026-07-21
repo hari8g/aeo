@@ -4,14 +4,19 @@ import { useCallback, useEffect, useState } from 'react'
 import ComplexityBadge from '@/components/ComplexityBadge'
 import EffortBreakdown from '@/components/EffortBreakdown'
 import GroundingCard from '@/components/GroundingCard'
+import { formatMoneyRange } from '@/lib/format'
 
 type EffortData = {
   summary?: string
   effortWeeksLow?: number
   effortWeeksHigh?: number
+  effortCostLow?: number
+  effortCostHigh?: number
+  effortCostCurrency?: string
   complexity?: string
   technicalRisks?: string[]
   assumptions?: string[]
+  workstreams?: string[]
   breakdown?: Record<string, number>
   recommendedTeamSize?: number
   codeComplexitySignal?: string
@@ -146,7 +151,12 @@ export default function EffortClient({ id, canEdit }: { id: string; canEdit: boo
 
   const low = Number(data.effortWeeksLow ?? 0)
   const high = Number(data.effortWeeksHigh ?? 0)
+  const costLow = Number(data.effortCostLow ?? NaN)
+  const costHigh = Number(data.effortCostHigh ?? NaN)
+  const hasCost = Number.isFinite(costLow) && Number.isFinite(costHigh)
   const risks = data.technicalRisks ?? []
+  const assumptions = data.assumptions ?? []
+  const workstreams = data.workstreams ?? []
   const addressed = new Set(data.addressedRiskIndices ?? [])
   const regs = data.applicableRegulations ?? []
 
@@ -161,23 +171,58 @@ export default function EffortClient({ id, canEdit }: { id: string; canEdit: boo
       <div className="bg-white border border-line rounded-xl3 overflow-hidden">
         <div className="px-5 py-4 border-b border-line">
           <h2 className="text-[16px] font-extrabold text-ink-1">How much work this is</h2>
-          <p className="text-[13.5px] text-ink-2 mt-1">{data.summary}</p>
+          <p className="text-[13.5px] text-ink-2 mt-1 whitespace-pre-wrap">{data.summary}</p>
         </div>
 
         <div className="px-5 py-5">
           <div className="text-center py-6 border-b border-line mb-6">
-            <div className="text-3xl font-extrabold tracking-tight text-ink-1">
-              {low} – {high}
-              <span className="text-base font-medium text-ink-3"> weeks</span>
-            </div>
+            {hasCost ? (
+              <>
+                <div className="text-3xl font-extrabold tracking-tight text-ink-1">
+                  {formatMoneyRange(
+                    costLow,
+                    costHigh,
+                    data.effortCostCurrency ?? 'EUR',
+                    'delivery',
+                  ).replace(' / delivery', '')}
+                </div>
+                <p className="text-[13px] text-ink-3 mt-1.5">
+                  fully loaded delivery · {low}–{high} weeks · team of{' '}
+                  {data.recommendedTeamSize ?? 2}
+                </p>
+              </>
+            ) : (
+              <div className="text-3xl font-extrabold tracking-tight text-ink-1">
+                {low} – {high}
+                <span className="text-base font-medium text-ink-3"> weeks</span>
+              </div>
+            )}
             <div className="flex items-center justify-center gap-2 mt-2 flex-wrap">
               <ComplexityBadge level={data.complexity ?? 'medium'} />
-              <span className="text-ink-3 text-[12px]">·</span>
-              <span className="text-[12.5px] text-ink-2">
-                Best done by a team of {data.recommendedTeamSize ?? 2}
-              </span>
+              {!hasCost && (
+                <>
+                  <span className="text-ink-3 text-[12px]">·</span>
+                  <span className="text-[12.5px] text-ink-2">
+                    Best done by a team of {data.recommendedTeamSize ?? 2}
+                  </span>
+                </>
+              )}
             </div>
           </div>
+
+          {workstreams.length > 0 && (
+            <div className="mb-6">
+              <h4 className="text-sm font-bold text-ink-1 mb-2">What we&apos;ll build</h4>
+              <ul className="space-y-1.5">
+                {workstreams.map((w, i) => (
+                  <li key={i} className="text-[13px] text-ink-2 flex gap-2">
+                    <span className="text-ink-3 shrink-0">{i + 1}.</span>
+                    <span>{w}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           <div className="mb-6">
             <h4 className="text-sm font-bold text-ink-1 mb-2">What could slow this down</h4>
@@ -186,28 +231,28 @@ export default function EffortClient({ id, canEdit }: { id: string; canEdit: boo
                 No specific risks flagged — this looks fairly straightforward.
               </p>
             ) : (
-              <ul className="space-y-1.5">
+              <ul className="space-y-2">
                 {risks.map((risk, i) => {
                   const done = addressed.has(i)
                   return (
                     <li
                       key={i}
-                      className="text-[13px] text-ink-2 flex items-center gap-2 group"
+                      className="text-[13px] text-ink-2 flex items-start gap-2 group"
                     >
-                      <span className="text-amber shrink-0">⚠</span>
+                      <span className="text-amber shrink-0 mt-0.5">⚠</span>
                       <span className={done ? 'line-through text-ink-3' : ''}>{risk}</span>
                       {canEdit && !done && (
                         <button
                           type="button"
                           disabled={busyRisk === i}
                           onClick={() => void markRiskAddressed(i)}
-                          className="text-[10.5px] font-bold text-blue ml-auto opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                          className="text-[10.5px] font-bold text-blue ml-auto shrink-0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
                         >
                           {busyRisk === i ? 'Saving…' : 'Mark as handled'}
                         </button>
                       )}
                       {done && (
-                        <span className="text-[10px] font-bold uppercase tracking-wide text-ok ml-auto">
+                        <span className="text-[10px] font-bold uppercase tracking-wide text-ok ml-auto shrink-0">
                           Handled
                         </span>
                       )}
@@ -234,6 +279,20 @@ export default function EffortClient({ id, canEdit }: { id: string; canEdit: boo
             )}
           </div>
 
+          {assumptions.length > 0 && (
+            <div className="mb-6">
+              <h4 className="text-sm font-bold text-ink-1 mb-2">What we&apos;re assuming</h4>
+              <ul className="space-y-1.5">
+                {assumptions.map((a, i) => (
+                  <li key={i} className="text-[13px] text-ink-2 flex gap-2">
+                    <span className="text-ink-3">•</span>
+                    <span>{a}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           <div className="mb-6">
             <h4 className="text-sm font-bold text-ink-1 mb-2">Where the time goes</h4>
             <EffortBreakdown breakdown={data.breakdown} />
@@ -255,7 +314,7 @@ export default function EffortClient({ id, canEdit }: { id: string; canEdit: boo
                 title="Rules that apply here"
                 body={
                   regs.length > 0
-                    ? `${regs.length} compliance rule${regs.length > 1 ? 's' : ''} apply — this typically adds review time.`
+                    ? regs.join(' · ')
                     : 'No special compliance rules apply to this area.'
                 }
               />

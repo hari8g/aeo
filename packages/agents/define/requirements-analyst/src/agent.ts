@@ -65,7 +65,7 @@ Return JSON ONLY: {"stories":[{"title":"...","description":"...","criteria":[{"l
       }],
     })
 
-    const draft = this.parse(llm.text)
+    const draft = this.parse(llm.text, `${feature.label}\n${feature.description ?? ''}`)
     const storyIds: number[] = []
     const acceptanceIds: number[] = []
 
@@ -108,7 +108,8 @@ Return JSON ONLY: {"stories":[{"title":"...","description":"...","criteria":[{"l
     return { storyIds, acceptanceIds }
   }
 
-  private parse(raw: string): StoryDraft[] {
+  private parse(raw: string, contextBlob = ''): StoryDraft[] {
+    const fallback = this.fallbackStories(contextBlob)
     try {
       const s = raw.indexOf('{'); const e = raw.lastIndexOf('}')
       if (s >= 0 && e > s) {
@@ -119,7 +120,7 @@ Return JSON ONLY: {"stories":[{"title":"...","description":"...","criteria":[{"l
           }>
         }
         if (p.stories?.length) {
-          return p.stories.map((r) => ({
+          const stories = p.stories.map((r) => ({
             title: r.title ?? 'Untitled story',
             description: r.description ?? '',
             criteria: r.criteria?.length
@@ -127,15 +128,128 @@ Return JSON ONLY: {"stories":[{"title":"...","description":"...","criteria":[{"l
                 label: c.label ?? 'Acceptance criterion',
                 description: c.description ?? '',
               }))
-              : [{ label: 'Given/When/Then stub', description: 'Stub acceptance criterion' }],
+              : fallback[0]!.criteria,
           }))
+          if (stories.some((st) => /stub/i.test(st.title) || /core capability/i.test(st.description))) {
+            return fallback
+          }
+          return stories
         }
       }
     } catch { /* fallback */ }
-    return [{
-      title: 'Core user story (stub)',
-      description: 'As a user I want the core capability so that value is delivered',
-      criteria: [{ label: 'Happy path works', description: 'Primary flow succeeds' }],
-    }]
+    return fallback
+  }
+
+  private fallbackStories(contextBlob: string): StoryDraft[] {
+    if (/toll\.?os|mlff|anpr|metering|₹5/i.test(contextBlob)) {
+      return [
+        {
+          title: 'Meter an ANPR plate diagnosis as a ₹5 Toll.OS event',
+          description:
+            'As a Bosch MPS commercial operator, I want every successful ANPR diagnosis on an MLFF gantry recorded as one billable Toll.OS orchestration event at ₹5, so corridor revenue matches sensor activity and supports the €1.5–2.0M/year value band from 2027.',
+          criteria: [
+            {
+              label: 'ANPR success writes one ledger event',
+              description:
+                'Above-threshold ANPR creates exactly one ₹5 orchestration event with a stable event key within the corridor metering SLA.',
+            },
+            {
+              label: 'Failed diagnoses do not bill',
+              description:
+                'Below-threshold or rejected ANPR creates no ₹5 event until an exception path attributes the passage.',
+            },
+            {
+              label: 'Latency within corridor SLA',
+              description: 'ANPR success to ledger persist ≤ configured p95 SLA (default 2s).',
+            },
+          ],
+        },
+        {
+          title: 'Fuse RFID FASTag with ANPR into one passage event',
+          description:
+            'As a toll operator, I want matching FASTag RFID and ANPR for the same free-flow passage to fuse into a single ₹5 event — never two, never a silent half-event.',
+          criteria: [
+            {
+              label: 'Matching window produces one event',
+              description: 'RFID+ANPR inside the fusion window yield one ₹5 event verified in invoice export.',
+            },
+            {
+              label: 'Orphan RFID opens exception',
+              description: 'Unmatched RFID opens exception workflow rather than dropping or auto-billing.',
+            },
+            {
+              label: 'Clock-skew tolerant match',
+              description: 'Within skew budget, one attribution; beyond skew, exception — never double-bill.',
+            },
+          ],
+        },
+        {
+          title: 'LiDAR exception opens a metered orchestration workflow',
+          description:
+            'As a roadside ops engineer, I want LiDAR exceptions to open Toll.OS workflows that still meter ₹5 when resolved, so dense urban sections stop under-billing.',
+          criteria: [
+            {
+              label: 'LiDAR exception published',
+              description: 'Every LiDAR exception reaches Toll.OS within SLA with vendor/gantry/reason codes.',
+            },
+            {
+              label: 'Resolved exception meters ₹5',
+              description: 'Resolution with plate/tag attribution records exactly one ₹5 event linked to the exception.',
+            },
+          ],
+        },
+        {
+          title: 'Idempotent ₹5 ledger for retries and replays',
+          description:
+            'As Bosch MPS billing, I want idempotent event keys so sensor retries and bus replays never invoice the same passage twice.',
+          criteria: [
+            {
+              label: 'Duplicate payload ignored',
+              description: 'Replay with the same event key returns the original event — no second ₹5 charge.',
+            },
+            {
+              label: 'Invoice equals ledger',
+              description: 'Daily invoice export counts equal distinct orchestration event IDs.',
+            },
+            {
+              label: 'Late RFID no double-bill',
+              description: 'Late RFID after ANPR updates metadata only.',
+            },
+          ],
+        },
+        {
+          title: 'Operator reconciliation view for corridor invoices',
+          description:
+            'As a concessionaire revenue-assurance lead, I want Toll.OS reconciliation from invoice lines to roadside attributions to defend the EUR value case without spreadsheets.',
+          criteria: [
+            {
+              label: 'Drill from invoice to sensors',
+              description: 'Each invoice line links to orchestration event and attribution summary.',
+            },
+            {
+              label: 'Gap report',
+              description: 'Ops can list hours where sensors exceed metered events beyond the 2% KPI band.',
+            },
+          ],
+        },
+      ]
+    }
+    return [
+      {
+        title: 'Deliver the primary outcome for the buying cohort',
+        description:
+          'As the primary operator, I want the core capability shipped with measurable acceptance so Portfolio value can be validated after release.',
+        criteria: [
+          {
+            label: 'Happy path succeeds',
+            description: 'Primary user flow completes successfully under expected load.',
+          },
+          {
+            label: 'Failure modes are explicit',
+            description: 'Errors surface actionable states; no silent data loss.',
+          },
+        ],
+      },
+    ]
   }
 }

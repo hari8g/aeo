@@ -116,10 +116,10 @@ export default function Sidebar({ user }: { user: StudioUser }) {
       <div className="px-2 pb-5 border-b border-line mb-4">
         <BoschLogo variant="mark" className="h-8 w-auto mb-2" />
         <div className="text-[11px] font-bold uppercase tracking-[0.06em] text-bosch-muted">
-          Mobility Platform &amp; Solutions
+          Bosch
         </div>
-        <div className="text-[14px] font-extrabold text-ink-1 tracking-tight mt-0.5">
-          Customer Insights
+        <div className="text-[14px] font-extrabold text-ink-1 tracking-tight mt-0.5 leading-snug">
+          Mobility Platform &amp; Solutions
         </div>
       </div>
 

@@ -10,7 +10,7 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: 'Customer Insights | Bosch Mobility Platform & Solutions',
+  title: 'Bosch Mobility Platform & Solutions',
   description:
     'Customer feedback and pain points for Bosch Mobility Platform & Solutions — MLFF, StaaS, and logistics.',
 }

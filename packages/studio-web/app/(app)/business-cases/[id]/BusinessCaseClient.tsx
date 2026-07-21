@@ -214,6 +214,7 @@ export default function BusinessCaseClient({
           <EditableField
             label="Who's affected"
             value={brief.customerSegment ?? ''}
+            multiline
             canEdit={canEdit}
             onSave={(v) => saveField('customerSegment', v)}
           />
@@ -238,14 +239,15 @@ export default function BusinessCaseClient({
           className="rounded-xl2 px-5 py-3 text-sm font-bold bg-bosch-red text-white disabled:opacity-50"
         >
           {sent
-            ? 'Already sent for sizing'
+            ? 'Sent for business case sizing'
             : busy === 'send'
               ? 'Sending…'
-              : 'Send for sizing →'}
+              : 'Send for business case sizing →'}
         </button>
       ) : (
         <p className="text-sm text-ink-3">
-          You can view this business case. Ask an editor or admin to edit or send it for sizing.
+          You can view this business case. Ask an editor or admin to edit or send it for business
+          case sizing.
         </p>
       )}
     </>

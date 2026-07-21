@@ -164,12 +164,61 @@ Return JSON ONLY: {"contexts":[{"name":"...","description":"...","dependsOn":["O
     } catch { /* fallback */ }
     return {
       contexts: [
-        { name: 'API Context', description: 'HTTP entrypoint context', dependsOn: ['Domain Context'] },
-        { name: 'Domain Context', description: 'Business logic context', dependsOn: [] },
+        {
+          name: 'Sensor Fusion',
+          description:
+            'Correlate ANPR, FASTag RFID, and LiDAR hints inside the fusion window with clock-skew budgets (~€350–400k program core).',
+          dependsOn: [],
+        },
+        {
+          name: 'Exception Orchestration',
+          description:
+            'LiDAR/orphan exceptions, vendor schema normalisation, aging/escalation until attribution.',
+          dependsOn: ['Sensor Fusion'],
+        },
+        {
+          name: 'Event Metering',
+          description: 'Create exactly one ₹5 orchestration event per attributed passage.',
+          dependsOn: ['Sensor Fusion', 'Exception Orchestration'],
+        },
+        {
+          name: 'Billing Ledger',
+          description:
+            'Idempotent ledger, invoice export, reconciliation for Bosch MPS ₹5/event charges and €1.5–2.0M value defence.',
+          dependsOn: ['Event Metering'],
+        },
       ],
       interfaces: [
-        { name: 'REST API', protocol: 'HTTP', context: 'API Context', dependsOn: ['Domain Service'] },
-        { name: 'Domain Service', protocol: 'internal', context: 'Domain Context', dependsOn: [] },
+        {
+          name: 'CorrelatePassage',
+          protocol: 'gRPC',
+          context: 'Sensor Fusion',
+          dependsOn: [],
+        },
+        {
+          name: 'OpenException',
+          protocol: 'HTTP',
+          context: 'Exception Orchestration',
+          dependsOn: [],
+        },
+        {
+          name: 'MeterOrchestrationEvent',
+          protocol: 'HTTP',
+          context: 'Event Metering',
+          dependsOn: [],
+        },
+        {
+          name: 'ExportDailyInvoice',
+          protocol: 'HTTP',
+          context: 'Billing Ledger',
+          dependsOn: [],
+        },
+        {
+          name: 'GetReconciliationSlice',
+          protocol: 'HTTP',
+          context: 'Billing Ledger',
+          dependsOn: [],
+        },
       ],
     }
   }

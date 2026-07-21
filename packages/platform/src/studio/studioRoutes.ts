@@ -368,15 +368,15 @@ export async function registerStudioRoutes(
       {
         label: 'StaaS 3PL warehouse inventory lag breaks outbound dock planning',
         description:
-          'Third-party logistics (3PL) customers on MPS Store-as-a-Service for logistics see warehouse inventory and ASN updates lag 4–12 hours, so outbound dock schedules are built on stale stock.',
-        cohorts: ['3pl', 'logistics'],
+          'Uffizio on MPS Store-as-a-Service for logistics sees warehouse inventory and ASN updates lag 4–12 hours, so outbound dock schedules are built on stale stock.',
+        cohorts: ['uffizio', 'logistics'],
         signalCount: 16,
         importanceScore: 0.78,
-        tags: ['StaaS', '3PL', 'logistics'],
+        tags: ['StaaS', 'Uffizio', 'logistics'],
         trend: 'growing',
         quotes: [
-          "Our 3PL StaaS inventory is still yesterday's when we release the afternoon dock wave.",
-          'Need near-real-time StaaS stock for logistics warehouses, not retail store sync.',
+          "Our Uffizio StaaS inventory is still yesterday's when we release the afternoon dock wave.",
+          'Need near-real-time StaaS stock for Uffizio logistics warehouses, not retail store sync.',
         ],
       },
     ]
@@ -2654,13 +2654,27 @@ export async function registerStudioRoutes(
     const defaultFiles = tollOs
       ? [
           'packages/tollos/fusion/anprRfid.ts',
+          'packages/tollos/fusion/clockSkew.ts',
           'packages/tollos/exceptions/lidarWorkflow.ts',
+          'packages/tollos/exceptions/vendorSchemaMap.ts',
           'packages/tollos/metering/eventLedger.ts',
+          'packages/tollos/metering/eventKey.ts',
           'packages/tollos/metering/eventLedger.test.ts',
+          'packages/tollos/billing/invoiceExport.ts',
+          'packages/tollos/billing/reconciliation.ts',
+          'packages/tollos/ops/exceptionQueue.ts',
         ]
       : undefined
     const defaultNote = tollOs
-      ? 'Record ANPR/RFID fusion, LiDAR exception orchestration, and idempotent ₹5 Toll.OS event metering.'
+      ? [
+          'Delivery shape for the ~€350–400k Toll.OS MLFF metering program (16–20 weeks, team of five):',
+          '• Sensor Fusion — ANPR/RFID correlate with clock-skew budgets; orphan paths feed exceptions.',
+          '• Exception Orchestration — LiDAR vendor schema map, open/resolve workflows, aging SLAs.',
+          '• Event Metering — ₹5 orchestration events with idempotent event keys; late RFID metadata-only.',
+          '• Billing Ledger — daily invoice export + reconciliation slices for concessionaire RA.',
+          '• Ops — exception queue UX for roadside / revenue assurance.',
+          'Risk: multi-vendor LiDAR schemas and free-flow clock skew — soak tests mandatory before 2027 value run-rate.',
+        ].join('\n')
       : undefined
     const adapter = await createHttpAdapter(opts.platformUrl, SOFTWARE_ENGINEERING_MANIFEST)
     const agent = new SoftwareEngineeringAgent(adapter, opts.llm)
@@ -2837,8 +2851,16 @@ export async function registerStudioRoutes(
       ? [
           { name: 'meter-anpr-inr-event', status: 'passed' },
           { name: 'fuse-rfid-anpr-single-event', status: 'passed' },
+          { name: 'fuse-tolerates-gantry-clock-skew', status: 'passed' },
+          { name: 'orphan-rfid-opens-exception', status: 'passed' },
           { name: 'lidar-exception-resolves-to-meter', status: 'passed' },
+          { name: 'lidar-vendor-schema-normalises', status: 'passed' },
           { name: 'idempotent-replay-no-double-bill', status: 'passed' },
+          { name: 'late-rfid-no-second-charge', status: 'passed' },
+          { name: 'invoice-export-matches-ledger-count', status: 'passed' },
+          { name: 'reconciliation-slice-joins-attribution', status: 'passed' },
+          { name: 'imagery-ttl-purges-raw-frames', status: 'passed' },
+          { name: 'exception-aging-escalates', status: 'passed' },
         ]
       : undefined
     const adapter = await createHttpAdapter(opts.platformUrl, QUALITY_ENGINEERING_MANIFEST)

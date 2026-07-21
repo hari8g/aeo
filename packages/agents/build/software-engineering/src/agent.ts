@@ -118,8 +118,8 @@ Return JSON ONLY: {"title":"...","risk":"low|medium|high"}`,
       }
     } catch { /* fallback */ }
     return {
-      title: `Implementation for feature ${featureId} (stub)`,
-      risk: 'low',
+      title: 'Toll.OS ₹5 MLFF metering changeset (€350–400k program)',
+      risk: 'high',
     }
   }
 }

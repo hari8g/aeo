@@ -27,6 +27,7 @@ export default async function BusinessCaseLayout({
         '✓ Admitted',
         '↩ Deferred',
         '✗ Rejected',
+        'Sent for business case sizing',
         'Sent for sizing',
       ].includes(detail.status ?? '')
   } catch {
@@ -42,8 +43,8 @@ export default async function BusinessCaseLayout({
         <h1 className="text-[22px] font-extrabold tracking-tight mb-1">{title}</h1>
         <p className="text-ink-3 text-[13.5px]">
           {sent
-            ? 'Sizing is underway — review the case, value, and effort side by side.'
-            : 'Review the draft, adjust the wording, then send it for value and effort sizing.'}
+            ? 'Business case sizing is underway — review the case, value, and effort side by side.'
+            : 'Review the draft, adjust the wording, then send it for business case sizing.'}
         </p>
       </div>
       {sent && <CaseTabStrip featureId={params.id} />}
