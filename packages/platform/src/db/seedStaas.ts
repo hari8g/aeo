@@ -47,6 +47,7 @@ async function insertFeature(args: {
   product: string
   painPointId: number
   brief: Record<string, unknown>
+  ownerUserId?: string
 }) {
   const feature = await queryOne<{ id: number }>(
     `INSERT INTO graph_nodes (kind, label, description, metadata, written_by_agent, trace_id)
@@ -57,8 +58,10 @@ async function insertFeature(args: {
       JSON.stringify({
         stage: 'INTAKE',
         product: args.product,
+        productClass: args.product,
         sentForSizing: true,
         demo: true,
+        ...(args.ownerUserId ? { ownerUserId: args.ownerUserId } : {}),
       }),
       randomUUID(),
     ],
@@ -119,7 +122,7 @@ async function ensureCycle(featureId: number, label: string, stage: string) {
   )
 }
 
-export async function seedStaas(): Promise<number> {
+export async function seedStaas(ownerUserId?: string): Promise<number> {
   const painId = await insertPainPoint(
     STAAS_PAIN,
     '3PL sites on MPS StaaS still plan docks on 4–12h-stale inventory/ASNs, while loyalty earn/burn and partner offers are fragmented across retail-era APIs — so logistics SLAs and member value both erode.',
@@ -143,6 +146,7 @@ export async function seedStaas(): Promise<number> {
     description:
       'Build StaaS logistics integration for Uffizio (near-real-time inventory + ASN + dock planning) and a unified loyalty management layer (earn/burn, tiers, partner offers) on the same platform.',
     product: 'StaaS',
+    ownerUserId,
     painPointId: painId,
     brief: {
       title: STAAS_FEATURE,

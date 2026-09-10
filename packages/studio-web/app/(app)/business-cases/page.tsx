@@ -25,6 +25,8 @@ type BusinessCaseRow = {
   effort_low?: number | null
   effort_high?: number | null
   top_segment?: string | null
+  product_class?: string | null
+  owner_name?: string | null
 }
 
 const FILTERS = [
@@ -33,6 +35,12 @@ const FILTERS = [
   { key: 'sizing', label: 'Being sized' },
   { key: 'awaiting_decision', label: 'Awaiting decision' },
   { key: 'admitted', label: 'Admitted' },
+] as const
+
+const PRODUCT_FILTERS = [
+  { key: 'all', label: 'All classes' },
+  { key: 'Toll.OS', label: 'Toll.OS' },
+  { key: 'StaaS', label: 'StaaS' },
 ] as const
 
 const STATUS_CHIP: Record<StatusKey, string> = {
@@ -58,13 +66,17 @@ const STATUS_ACCENT: Record<StatusKey, string> = {
 export default function BusinessCasesPage() {
   const [rows, setRows] = useState<BusinessCaseRow[]>([])
   const [filter, setFilter] = useState<(typeof FILTERS)[number]['key']>('all')
+  const [productFilter, setProductFilter] =
+    useState<(typeof PRODUCT_FILTERS)[number]['key']>('all')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const fromUrl = new URLSearchParams(window.location.search).get('filter') as
-      | (typeof FILTERS)[number]['key']
-      | null
+    const params = new URLSearchParams(window.location.search)
+    const fromUrl = params.get('filter') as (typeof FILTERS)[number]['key'] | null
+    const productFromUrl = params.get('product') as (typeof PRODUCT_FILTERS)[number]['key'] | null
     if (fromUrl && FILTERS.some((f) => f.key === fromUrl)) setFilter(fromUrl)
+    if (productFromUrl && PRODUCT_FILTERS.some((f) => f.key === productFromUrl))
+      setProductFilter(productFromUrl)
   }, [])
 
   useEffect(() => {
@@ -75,10 +87,13 @@ export default function BusinessCasesPage() {
       .finally(() => setLoading(false))
   }, [])
 
-  const visible = useMemo(
-    () => (filter === 'all' ? rows : rows.filter((r) => r.status_key === filter)),
-    [rows, filter],
-  )
+  const visible = useMemo(() => {
+    let list = filter === 'all' ? rows : rows.filter((r) => r.status_key === filter)
+    if (productFilter !== 'all') {
+      list = list.filter((r) => r.product_class === productFilter)
+    }
+    return list
+  }, [rows, filter, productFilter])
 
   return (
     <>
@@ -92,7 +107,7 @@ export default function BusinessCasesPage() {
         </p>
       </div>
 
-      <div className="flex flex-wrap gap-2 mb-5">
+      <div className="flex flex-wrap gap-2 mb-3">
         {FILTERS.map((f) => (
           <button
             key={f.key}
@@ -102,6 +117,23 @@ export default function BusinessCasesPage() {
               filter === f.key
                 ? 'bg-bosch-red text-white border-bosch-red'
                 : 'bg-white text-ink-2 border-line hover:border-bosch-red'
+            }`}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex flex-wrap gap-2 mb-5">
+        {PRODUCT_FILTERS.map((f) => (
+          <button
+            key={f.key}
+            type="button"
+            onClick={() => setProductFilter(f.key)}
+            className={`text-[11px] font-bold uppercase tracking-wide rounded-full px-3 py-1.5 border ${
+              productFilter === f.key
+                ? 'bg-ink-1 text-white border-ink-1'
+                : 'bg-white text-ink-2 border-line hover:border-ink-1'
             }`}
           >
             {f.label}
@@ -167,6 +199,16 @@ export default function BusinessCasesPage() {
                         {item.pain_point_count} pain point
                         {item.pain_point_count === 1 ? '' : 's'}
                       </span>
+                      {item.product_class && (
+                        <span className="text-[10px] font-bold uppercase tracking-wide bg-surface-2 text-ink-1 border border-line rounded-full px-2 py-0.5">
+                          {item.product_class}
+                        </span>
+                      )}
+                      {item.owner_name && (
+                        <span className="text-[10px] font-bold uppercase tracking-wide bg-surface-1 text-ink-2 border border-line rounded-full px-2 py-0.5">
+                          PO: {item.owner_name}
+                        </span>
+                      )}
                       {item.top_segment && (
                         <span className="text-[10px] font-bold uppercase tracking-wide bg-blue-bg text-blue border border-blue-bd rounded-full px-2 py-0.5">
                           🎯 {item.top_segment}

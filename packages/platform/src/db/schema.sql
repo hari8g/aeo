@@ -193,3 +193,18 @@ CREATE TABLE IF NOT EXISTS studio_connectors (
   connected_at TIMESTAMPTZ,
   PRIMARY KEY (workspace_id, connector)
 );
+
+-- Allow finance (controlling) role on existing databases
+DO $$ BEGIN
+  ALTER TABLE studio_users DROP CONSTRAINT IF EXISTS studio_users_role_check;
+  ALTER TABLE studio_users ADD CONSTRAINT studio_users_role_check
+    CHECK (role IN ('admin','editor','viewer','finance'));
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  ALTER TABLE studio_invitations DROP CONSTRAINT IF EXISTS studio_invitations_role_check;
+  ALTER TABLE studio_invitations ADD CONSTRAINT studio_invitations_role_check
+    CHECK (role IN ('admin','editor','viewer','finance'));
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;

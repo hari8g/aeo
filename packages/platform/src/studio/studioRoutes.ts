@@ -44,6 +44,7 @@ import { query, queryOne } from '../db/pool.js'
 import type { CycleOrchestrator } from '../orchestrator/cycleOrchestrator.js'
 import type { ILLMGateway } from '@avp/shared'
 import { registerShipLearnRoutes } from './shipLearnRoutes.js'
+import { productClassFromMeta, registerControllingRoutes } from './controllingRoutes.js'
 
 function encryptSecret(plain: string): string {
   const key = createHash('sha256')
@@ -577,6 +578,7 @@ export async function registerStudioRoutes(
       effort_json: string | null
       gtm_meta: Record<string, unknown> | null
       gtm_json: string | null
+      owner_name: string | null
     }>(`
       SELECT
         f.id as feature_id,
@@ -649,7 +651,11 @@ export async function registerStudioRoutes(
           JOIN graph_edges ge ON ge.from_node_id = g.id AND ge.kind IN ('INFORMS','ADDRESSES')
           WHERE ge.to_node_id = f.id AND g.kind='GTM_PROJECTION'
           ORDER BY g.created_at DESC LIMIT 1
-        ) as gtm_json
+        ) as gtm_json,
+        (
+          SELECT su.name FROM studio_users su
+          WHERE su.id::text = f.metadata->>'ownerUserId' LIMIT 1
+        ) as owner_name
       FROM graph_nodes f
       LEFT JOIN graph_edges ge2 ON ge2.to_node_id = f.id AND ge2.kind = 'MOTIVATES'
       LEFT JOIN graph_nodes b ON b.kind='BRIEF' AND b.id = ge2.from_node_id
@@ -704,13 +710,19 @@ export async function registerStudioRoutes(
       }
       let effortLow: number | null = null
       let effortHigh: number | null = null
+      let effortCostLow: number | null = null
+      let effortCostHigh: number | null = null
       try {
         const e = row.effort_json ? (JSON.parse(row.effort_json) as Record<string, unknown>) : {}
         const em = row.effort_meta ?? {}
         effortLow = Number(em.effortWeeksLow ?? e.effortWeeksLow)
         effortHigh = Number(em.effortWeeksHigh ?? e.effortWeeksHigh)
+        effortCostLow = Number(em.effortCostLow ?? e.effortCostLow)
+        effortCostHigh = Number(em.effortCostHigh ?? e.effortCostHigh)
         if (!Number.isFinite(effortLow!)) effortLow = null
         if (!Number.isFinite(effortHigh!)) effortHigh = null
+        if (!Number.isFinite(effortCostLow!)) effortCostLow = null
+        if (!Number.isFinite(effortCostHigh!)) effortCostHigh = null
       } catch {
         /* ignore */
       }
@@ -745,7 +757,14 @@ export async function registerStudioRoutes(
         value_currency: valueCurrency,
         effort_low: effortLow,
         effort_high: effortHigh,
+        effort_cost_low: effortCostLow,
+        effort_cost_high: effortCostHigh,
         top_segment: topSegment,
+        product_class: productClassFromMeta(featureMeta),
+        owner_user_id:
+          typeof featureMeta.ownerUserId === 'string' ? featureMeta.ownerUserId : null,
+        owner_name: row.owner_name ?? null,
+        loop_closed: featureMeta.loopClosed === true,
         sent_for_sizing: isSentForSizing(statusKey, featureMeta),
       }
     })
@@ -839,6 +858,9 @@ export async function registerStudioRoutes(
       status_key: statusKey,
       duplicate_feature_id: row.duplicate_feature_id,
       feature_meta: featureMeta,
+      product_class: productClassFromMeta(featureMeta),
+      owner_user_id:
+        typeof featureMeta.ownerUserId === 'string' ? featureMeta.ownerUserId : null,
       sent_for_sizing: isSentForSizing(statusKey, featureMeta),
     }
   })
@@ -2986,6 +3008,7 @@ export async function registerStudioRoutes(
     return agent.run({ featureId, cycleId: cycle?.id })
   })
 
+  await registerControllingRoutes(app)
   await registerShipLearnRoutes(app, opts)
 }
 

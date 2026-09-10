@@ -1,0 +1,16 @@
+{
+  "name": "@avp/office-view",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build-roster.mjs && node build.mjs",
+    "build:bundle": "node build.mjs",
+    "build:roster": "node scripts/build-roster.mjs",
+    "check": "node scripts/check.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.1",
+    "three": "^0.185.1"
+  }
+}

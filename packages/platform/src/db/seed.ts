@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs'
 import { randomUUID } from 'node:crypto'
-import { initPool, query, queryOne } from './pool.js'
+import { initPool, migrate, query, queryOne } from './pool.js'
 import { seedStaas, STAAS_FEATURE } from './seedStaas.js'
 
 const TOLL_PAIN =
@@ -70,6 +70,7 @@ async function insertFeature(args: {
   brief: Record<string, unknown>
   painPointId: number
   product: string
+  ownerUserId?: string
 }) {
   const brief = await queryOne<{ id: number }>(
     `
@@ -97,6 +98,8 @@ async function insertFeature(args: {
         demo: true,
         sentForSizing: true,
         product: args.product,
+        productClass: args.product,
+        ...(args.ownerUserId ? { ownerUserId: args.ownerUserId } : {}),
       }),
     ],
   )
@@ -142,7 +145,7 @@ async function ensureCycle(featureId: number, label: string, stage: string) {
   )
 }
 
-async function seedTollOs(): Promise<number> {
+async function seedTollOs(ownerUserId?: string): Promise<number> {
   const painId = await insertPainPoint(
     TOLL_PAIN,
     'On Toll.OS Multi-Lane Free Flow corridors, billable orchestration events — ANPR plate diagnosis, RFID FASTag reads, and LiDAR exception handling — are recorded inconsistently, so Bosch MPS cannot reliably bill the contracted ₹5 per event.',
@@ -165,6 +168,7 @@ async function seedTollOs(): Promise<number> {
     description:
       'Build the complete Toll.OS MLFF operating system for Bosch MPS: sensor fusion (ANPR + FASTag RFID + LiDAR exceptions), exception orchestration, ₹5/event metering, idempotent billing ledger, and operator reconciliation — the system of record for free-flow corridor revenue.',
     product: 'Toll.OS',
+    ownerUserId,
     painPointId: painId,
     brief: {
       title: TOLL_FEATURE,
@@ -1619,12 +1623,15 @@ async function seedTollOsShipLearn(featureId: number) {
 
 async function seed() {
   await initPool()
+  await migrate()
   const passwordHash = await bcrypt.hash('demo1234', 10)
   await query(
     `
     INSERT INTO studio_users (email, name, role, password_hash) VALUES
       ('hariprasad@bosch-mps.com', 'Hariprasad', 'admin', $1),
-      ('pradeep.r@bosch-mps.com', 'Pradeep R', 'viewer', $1)
+      ('pradeep.r@bosch-mps.com', 'Pradeep R', 'viewer', $1),
+      ('priya.s@bosch-mps.com', 'Priya S', 'editor', $1),
+      ('controlling@bosch-mps.com', 'Controlling Team', 'finance', $1)
     ON CONFLICT (email) DO UPDATE SET
       name = EXCLUDED.name,
       role = EXCLUDED.role,
@@ -1635,15 +1642,19 @@ async function seed() {
   await query(
     `DELETE FROM studio_users WHERE email IN ('sarah@yourcompany.com', 'raj@yourcompany.com', 'anita@yourcompany.com')`,
   ).catch(() => null)
-  console.log('Seeded 2 studio users — password for all: demo1234')
-
-  await purgeGraph()
-  await seedTollOs()
-  await seedStaas()
+  console.log('Seeded 4 studio users — password for all: demo1234')
 
   const admin = await queryOne<{ id: string }>(
     `SELECT id FROM studio_users WHERE email='hariprasad@bosch-mps.com'`,
   )
+  const editor = await queryOne<{ id: string }>(
+    `SELECT id FROM studio_users WHERE email='priya.s@bosch-mps.com'`,
+  )
+
+  await purgeGraph()
+  await seedTollOs(admin?.id)
+  await seedStaas(editor?.id)
+
   if (admin) {
     await query(`DELETE FROM studio_approvers`)
     await query(`INSERT INTO studio_approvers (user_id, title) VALUES ($1,'CPO')`, [admin.id])

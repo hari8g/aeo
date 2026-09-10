@@ -59,11 +59,6 @@ if ($roleExists -ne "1") {
   Write-Host "Updated password for role $AppUser"
 }
 
-# Optional: also apply init-avp.sql (idempotent role ensure) via -f if present
-if (Test-Path $InitSql) {
-  & $Psql -h $PgHost -p $DbPort -U $PgUser -d postgres -v ON_ERROR_STOP=1 -f $InitSql | Out-Null
-}
-
 $dbExists = (& $Psql -h $PgHost -p $DbPort -U $PgUser -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname = '$DbName'").Trim()
 if ($dbExists -ne "1") {
   & $Psql -h $PgHost -p $DbPort -U $PgUser -d postgres -v ON_ERROR_STOP=1 `

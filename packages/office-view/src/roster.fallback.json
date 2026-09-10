@@ -1,0 +1,234 @@
+{
+  "agents": [
+    {
+      "id": "voc-intelligence:v1",
+      "name": "VoC Intelligence Agent",
+      "archetype": "Market Research Analyst",
+      "domain": "listen",
+      "dept": "mkt",
+      "lead": true,
+      "requiresGate": false,
+      "maxWritesPerMinute": 120
+    },
+    {
+      "id": "market-signal:v1",
+      "name": "Market Signal Agent",
+      "archetype": "Competitive Intelligence Analyst",
+      "domain": "listen",
+      "dept": "mkt",
+      "lead": false,
+      "requiresGate": false,
+      "maxWritesPerMinute": 40
+    },
+    {
+      "id": "portfolio-management:v1",
+      "name": "Portfolio Management Agent",
+      "archetype": "PMO Director",
+      "domain": "decide",
+      "dept": "cor",
+      "lead": true,
+      "requiresGate": true,
+      "maxWritesPerMinute": 10
+    },
+    {
+      "id": "business-case:v1",
+      "name": "Business Case Agent",
+      "archetype": "Business Analyst",
+      "domain": "decide",
+      "dept": "cor",
+      "lead": false,
+      "requiresGate": false,
+      "maxWritesPerMinute": 20
+    },
+    {
+      "id": "value-engineering:v1",
+      "name": "Value Engineering Agent",
+      "archetype": "Value Engineer",
+      "domain": "decide",
+      "dept": "cor",
+      "lead": false,
+      "requiresGate": false,
+      "maxWritesPerMinute": 20
+    },
+    {
+      "id": "solutions-estimation:v1",
+      "name": "Solutions Estimation Agent",
+      "archetype": "Solution Architect",
+      "domain": "decide",
+      "dept": "cor",
+      "lead": false,
+      "requiresGate": false,
+      "maxWritesPerMinute": 20
+    },
+    {
+      "id": "product-strategy:v1",
+      "name": "Product Strategy Agent",
+      "archetype": "Product Strategist",
+      "domain": "decide",
+      "dept": "cor",
+      "lead": false,
+      "requiresGate": false,
+      "maxWritesPerMinute": 20
+    },
+    {
+      "id": "requirements-analyst:v1",
+      "name": "Requirements Analyst Agent",
+      "archetype": "Requirements Analyst",
+      "domain": "define",
+      "dept": "px",
+      "lead": true,
+      "requiresGate": false,
+      "maxWritesPerMinute": 30
+    },
+    {
+      "id": "domain-steward:v1",
+      "name": "Domain Steward Agent",
+      "archetype": "Domain Modeler",
+      "domain": "define",
+      "dept": "px",
+      "lead": false,
+      "requiresGate": false,
+      "maxWritesPerMinute": 30
+    },
+    {
+      "id": "solutions-architect:v1",
+      "name": "Solutions Architect Agent",
+      "archetype": "Solutions Architect",
+      "domain": "define",
+      "dept": "px",
+      "lead": false,
+      "requiresGate": false,
+      "maxWritesPerMinute": 20
+    },
+    {
+      "id": "software-engineering:v1",
+      "name": "Software Engineering Agent",
+      "archetype": "Software Engineer",
+      "domain": "build",
+      "dept": "eng",
+      "lead": true,
+      "requiresGate": false,
+      "maxWritesPerMinute": 40
+    },
+    {
+      "id": "quality-engineering:v1",
+      "name": "Quality Engineering Agent",
+      "archetype": "Quality Engineer",
+      "domain": "build",
+      "dept": "eng",
+      "lead": false,
+      "requiresGate": false,
+      "maxWritesPerMinute": 30
+    },
+    {
+      "id": "documentation:v1",
+      "name": "Documentation Agent",
+      "archetype": "Technical Writer",
+      "domain": "build",
+      "dept": "eng",
+      "lead": false,
+      "requiresGate": false,
+      "maxWritesPerMinute": 30
+    },
+    {
+      "id": "release-manager:v1",
+      "name": "Release Manager Agent",
+      "archetype": "Release Manager",
+      "domain": "ship",
+      "dept": "gtm",
+      "lead": true,
+      "requiresGate": false,
+      "maxWritesPerMinute": 30
+    },
+    {
+      "id": "devops:v1",
+      "name": "DevOps Agent",
+      "archetype": "DevOps Engineer",
+      "domain": "ship",
+      "dept": "gtm",
+      "lead": false,
+      "requiresGate": false,
+      "maxWritesPerMinute": 40
+    },
+    {
+      "id": "devsecops:v1",
+      "name": "DevSecOps Agent",
+      "archetype": "DevSecOps Engineer",
+      "domain": "ship",
+      "dept": "gtm",
+      "lead": false,
+      "requiresGate": false,
+      "maxWritesPerMinute": 60
+    },
+    {
+      "id": "finops:v1",
+      "name": "FinOps Agent",
+      "archetype": "FinOps Analyst",
+      "domain": "ship",
+      "dept": "gtm",
+      "lead": false,
+      "requiresGate": false,
+      "maxWritesPerMinute": 30
+    },
+    {
+      "id": "deployment-engineer:v1",
+      "name": "Deployment Engineer Agent",
+      "archetype": "Deployment Engineer",
+      "domain": "ship",
+      "dept": "gtm",
+      "lead": false,
+      "requiresGate": false,
+      "maxWritesPerMinute": 30
+    },
+    {
+      "id": "sre:v1",
+      "name": "SRE Agent",
+      "archetype": "Site Reliability Engineer",
+      "domain": "ship",
+      "dept": "gtm",
+      "lead": false,
+      "requiresGate": false,
+      "maxWritesPerMinute": 40
+    },
+    {
+      "id": "calibration:v1",
+      "name": "Calibration Agent",
+      "archetype": "Calibration Analyst",
+      "domain": "learn",
+      "dept": "cx",
+      "lead": true,
+      "requiresGate": false,
+      "maxWritesPerMinute": 20
+    },
+    {
+      "id": "attribution-analyst:v1",
+      "name": "Attribution Analyst Agent",
+      "archetype": "Value Attribution Analyst",
+      "domain": "learn",
+      "dept": "cx",
+      "lead": false,
+      "requiresGate": false,
+      "maxWritesPerMinute": 20
+    },
+    {
+      "id": "stakeholder-impact:v1",
+      "name": "Stakeholder Impact Agent",
+      "archetype": "Change Impact Analyst",
+      "domain": "learn",
+      "dept": "cx",
+      "lead": false,
+      "requiresGate": false,
+      "maxWritesPerMinute": 20
+    },
+    {
+      "id": "organizational-learning:v1",
+      "name": "Organizational Learning Agent",
+      "archetype": "Knowledge Manager",
+      "domain": "learn",
+      "dept": "cx",
+      "lead": false,
+      "requiresGate": false,
+      "maxWritesPerMinute": 20
+    }
+  ]
+}

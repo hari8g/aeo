@@ -25,6 +25,9 @@ import {
   Target,
   HeartHandshake,
   GraduationCap,
+  PieChart,
+  Layers,
+  Building2,
 } from 'lucide-react'
 import BoschLogo from '@/components/BoschLogo'
 
@@ -33,12 +36,17 @@ type NavItem = {
   label: string
   icon: typeof Home
   adminOnly?: boolean
+  controllingOnly?: boolean
 }
 
 const NAV_GROUPS: { label: string | null; items: NavItem[] }[] = [
   {
     label: null,
-    items: [{ href: '/', label: 'Home', icon: Home }],
+    items: [
+      { href: '/', label: 'Home', icon: Home },
+      { href: '/office', label: 'Office', icon: Building2 },
+      { href: '/controlling', label: 'Controlling', icon: PieChart, controllingOnly: true },
+    ],
   },
   {
     label: 'Listen',
@@ -52,6 +60,7 @@ const NAV_GROUPS: { label: string | null; items: NavItem[] }[] = [
     items: [
       { href: '/business-cases', label: 'Business Cases', icon: FileText },
       { href: '/gtm', label: 'Go-to-Market', icon: Map },
+      { href: '/gtm/segments', label: 'Segment portfolio', icon: Layers, controllingOnly: true },
       { href: '/portfolio', label: 'Portfolio Review', icon: Scale },
       { href: '/decisions', label: 'Decision History', icon: ScrollText },
     ],
@@ -103,6 +112,8 @@ type StudioUser = { name?: string | null; role?: string }
 export default function Sidebar({ user }: { user: StudioUser }) {
   const pathname = usePathname()
   const isAdmin = user.role === 'admin'
+  const canSeeControlling =
+    user.role === 'admin' || user.role === 'editor' || user.role === 'finance'
   const initials =
     user.name
       ?.split(' ')
@@ -125,7 +136,11 @@ export default function Sidebar({ user }: { user: StudioUser }) {
 
       <nav className="flex-1 overflow-y-auto">
         {NAV_GROUPS.map((group, gi) => {
-          const items = group.items.filter((item) => !item.adminOnly || isAdmin)
+          const items = group.items.filter((item) => {
+            if (item.adminOnly && !isAdmin) return false
+            if (item.controllingOnly && !canSeeControlling) return false
+            return true
+          })
           if (!items.length) return null
           return (
             <div key={group.label ?? `g-${gi}`}>

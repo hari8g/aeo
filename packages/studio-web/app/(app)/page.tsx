@@ -17,6 +17,24 @@ type BusinessCaseRow = {
   top_segment?: string | null
   sent_for_sizing?: boolean
   pain_point_count?: number
+  product_class?: string | null
+  owner_user_id?: string | null
+  owner_name?: string | null
+  loop_closed?: boolean
+  effort_cost_low?: number | null
+  effort_cost_high?: number | null
+}
+
+type ControllingSummary = {
+  product_classes: Array<{
+    product_class: string
+    program_count: number
+    value_low: number
+    value_high: number
+    delivery_cost_low: number
+    delivery_cost_high: number
+    closed_count: number
+  }>
 }
 
 type GtmDetail = {
@@ -79,8 +97,16 @@ async function getClosedLoops() {
   }
 }
 
-function programBlurb(title: string): { product: string; focus: string; unit: string } {
-  if (/toll\.?os|mlff/i.test(title)) {
+async function getControllingSummary() {
+  try {
+    return await platformFetch<ControllingSummary>('/studio/controlling/summary')
+  } catch {
+    return null
+  }
+}
+
+function programBlurb(title: string, productClass?: string | null): { product: string; focus: string; unit: string } {
+  if (productClass === 'Toll.OS' || /toll\.?os|mlff/i.test(title)) {
     return {
       product: 'Toll.OS',
       focus: 'Complete MLFF operating system — ANPR · FASTag RFID · LiDAR fusion, ₹5/event metering, ledger & reconciliation',
@@ -102,11 +128,13 @@ export default async function HomePage({
   const session = await auth()
   const userId = (session?.user as { id?: string } | undefined)?.id
   const name = session?.user?.name?.split(' ')[0] || 'there'
-  const [cases, awaiting, closedLoops] = await Promise.all([
+  const [cases, awaiting, closedLoops, controlling] = await Promise.all([
     getCases(),
     getAwaiting(userId),
     getClosedLoops(),
+    getControllingSummary(),
   ])
+  const myPrograms = userId ? cases.filter((c) => c.owner_user_id === userId) : []
   const gtmRows = await Promise.all(cases.map((c) => getGtm(c.feature_id)))
   const gtmById = new Map(gtmRows.filter(Boolean).map((g) => [g!.feature_id, g!]))
 
@@ -201,6 +229,62 @@ export default async function HomePage({
         </div>
       </div>
 
+      {controlling?.product_classes?.length ? (
+        <>
+          <div className="mb-3 flex items-end justify-between gap-3">
+            <h2 className="text-[16px] font-extrabold text-ink-1">By product class</h2>
+            <Link href="/controlling" className="text-xs font-bold text-bosch-red hover:underline">
+              Controlling dashboard →
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-8">
+            {controlling.product_classes.map((pc) => (
+              <Link
+                key={pc.product_class}
+                href={`/business-cases?product=${encodeURIComponent(pc.product_class)}`}
+                className="rounded-xl3 border border-line bg-white px-5 py-4 hover:border-bosch-red block"
+              >
+                <div className="text-[10px] font-bold uppercase tracking-wide text-bosch-muted mb-1">
+                  {pc.product_class}
+                </div>
+                <div className="text-[14px] font-extrabold text-ink-1">
+                  {formatMoneyRange(pc.value_low, pc.value_high, 'EUR', 'year')}
+                </div>
+                <div className="text-[12px] text-ink-2 mt-2">
+                  {pc.program_count} program{pc.program_count === 1 ? '' : 's'} · delivery{' '}
+                  {formatMoneyRange(pc.delivery_cost_low, pc.delivery_cost_high, 'EUR')} ·{' '}
+                  {pc.closed_count} loop closed
+                </div>
+              </Link>
+            ))}
+          </div>
+        </>
+      ) : null}
+
+      {myPrograms.length > 0 && (
+        <>
+          <div className="mb-3 flex items-end justify-between gap-3">
+            <h2 className="text-[16px] font-extrabold text-ink-1">My programs</h2>
+            <span className="text-xs text-ink-3">Product owner view</span>
+          </div>
+          <div className="space-y-2 mb-8">
+            {myPrograms.map((c) => (
+              <Link
+                key={c.feature_id}
+                href={`/business-cases/${c.feature_id}`}
+                className="block rounded-xl2 border border-line bg-white px-4 py-3 hover:border-bosch-red"
+              >
+                <div className="text-[13px] font-extrabold text-ink-1">{c.title}</div>
+                <div className="text-[11px] text-ink-3 mt-1">
+                  {c.product_class} · {c.status}
+                  {c.loop_closed ? ' · loop closed' : ''}
+                </div>
+              </Link>
+            ))}
+          </div>
+        </>
+      )}
+
       <div className="mb-3 flex items-end justify-between gap-3">
         <h2 className="text-[16px] font-extrabold text-ink-1">Programs in flight</h2>
         <Link href="/business-cases" className="text-xs font-bold text-bosch-red hover:underline">
@@ -215,7 +299,7 @@ export default async function HomePage({
           </div>
         ) : (
           cases.map((c) => {
-            const blurb = programBlurb(c.title)
+            const blurb = programBlurb(c.title, c.product_class)
             const gtm = gtmById.get(c.feature_id)?.projection?.data
             const econ = gtm?.economics
             const currency = c.value_currency ?? econ?.currency ?? 'EUR'

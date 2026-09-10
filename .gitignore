@@ -18,3 +18,5 @@ coverage/
 .vscode/
 *.swp
 .pnpm-store/
+packages/studio-web/public/office/
+packages/office-view/src/roster.generated.json

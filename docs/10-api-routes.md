@@ -83,6 +83,17 @@ Next BFF routes live under `packages/studio-web/app/api/**` and add session RBAC
 | `POST /studio/lessons/:id/capture` | `/api/lessons/:id/capture` |
 | `POST /studio/lessons/:id/close` | `/api/lessons/:id/close` |
 
+## Office
+
+| Platform | Next BFF |
+|----------|----------|
+| `GET /studio/office/roster` | `/api/office/roster` |
+| `GET /studio/office/state` | `/api/office/state` |
+| `GET /studio/office/graph` | `/api/office/graph` |
+| `GET /studio/office/stream` (SSE) | `/api/office/stream` |
+
+Studio surface: `/office` (dark: `/office/dark`). Bundle: `pnpm -F @avp/office-view build`.
+
 ## Other Platform endpoints
 
 - `POST /calibration` — used by Calibration agent  

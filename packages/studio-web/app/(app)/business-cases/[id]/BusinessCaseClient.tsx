@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 import EditableField, { ReadOnlyField } from '@/components/EditableField'
+import EffectivenessScorecard from '@/components/EffectivenessScorecard'
 
 type Brief = {
   title?: string
@@ -195,6 +196,8 @@ export default function BusinessCaseClient({
           )}
         </div>
       )}
+
+      {sent && <EffectivenessScorecard featureId={id} />}
 
       <div className="bg-white border border-line rounded-xl3 overflow-hidden mb-6">
         <div className="px-5 py-4 border-b border-line flex items-center justify-between gap-3">

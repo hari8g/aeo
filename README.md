@@ -15,7 +15,8 @@ Most “AI for product” demos stop at chat. AEO models the **whole product lif
 1. **Studio** — role-aware boards (Admin / Editor / Viewer) in Bosch red UI  
 2. **Platform** — Fastify API, Postgres graph, cycles, calibration, studio BFF auth  
 3. **Agents** — Listen / Decide / Define / Build / Ship / Learn specialists that write typed graph artifacts  
-4. **Loop close** — Learn calibrates predictions, marks the cycle `DONE`, and feeds the next Listen pass  
+4. **Office** — isometric Studio surface at `/office` (department pods + live knowledge graph)  
+5. **Loop close** — Learn calibrates predictions, marks the cycle `DONE`, and feeds the next Listen pass  
 
 ---
 
@@ -85,6 +86,7 @@ Open **http://localhost:3001** → Enter demo as Hariprasad.
 ```
 packages/
   studio-web/          Next.js Customer Insights UI (Bosch MPS brand)
+  office-view/         Three.js isometric office, bundled into studio-web/public/office
   platform/            Fastify Platform API, graph DB, studio routes, seed
   shared/              Graph kinds, HTTP adapter, shared types
   agents/
@@ -108,6 +110,7 @@ Workspace name in `package.json` remains `avp`; GitHub remote is **aeo**.
 
 | Phase | Nav | What you do |
 |-------|-----|-------------|
+| **Office** | Office | 3D floor plan of the six MPS departments and the live graph — see [`packages/office-view/README.md`](./packages/office-view/README.md) |
 | **Listen** | Add Feedback, Pain Points | Ingest VoC; cluster pains |
 | **Decide** | Business Cases, GTM, Portfolio, Decision History | Case → value → effort → GTM → admit/defer/reject |
 | **Define** | Requirements, Domain Model, Architecture | Stories/ACs → concepts/KPIs → bounded contexts |

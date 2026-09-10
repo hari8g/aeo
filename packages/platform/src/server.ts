@@ -17,6 +17,7 @@ import { JwtService } from './auth/jwtService.js'
 import { createLLMGateway } from './llm/llmGateway.js'
 import { CycleOrchestrator } from './orchestrator/cycleOrchestrator.js'
 import { registerStudioRoutes } from './studio/studioRoutes.js'
+import { registerOfficeRoutes } from './studio/officeRoutes.js'
 import type { AgentManifest, AgentJwtPayload } from '@avp/shared'
 
 declare module 'fastify' {
@@ -69,6 +70,7 @@ async function start(): Promise<void> {
   const STUDIO_SECRET = process.env.STUDIO_SECRET ?? 'avp-studio-dev-secret'
   const STUDIO_PREFIXES = [
     '/studio/',
+    '/studio/office/',
     '/ingest/',
     '/connectors',
     '/settings',
@@ -483,6 +485,7 @@ async function start(): Promise<void> {
 
   const platformUrl = process.env.AVP_PLATFORM_URL ?? `http://127.0.0.1:${PORT}`
   await registerStudioRoutes(app, { llm, platformUrl, orchestrator })
+  await registerOfficeRoutes(app, { bus })
 
   process.on('SIGTERM', async () => {
     await shutdown()
