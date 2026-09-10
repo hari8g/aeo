@@ -380,7 +380,9 @@ export class CycleOrchestrator {
 
   async tick(): Promise<void> {
     const active = await query<{ id: string }>(
-      `SELECT id FROM cycles WHERE status='active' AND current_stage != 'DONE'`,
+      `SELECT id FROM cycles
+       WHERE status='active' AND current_stage != 'DONE'
+         AND COALESCE(metadata->>'officeTopic', 'false') <> 'true'`,
     )
     for (const cycle of active) {
       await this.advance(cycle.id).catch(console.error)

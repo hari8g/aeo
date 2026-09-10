@@ -21,10 +21,19 @@ if ((roster.agents ?? []).length !== 23) {
   process.exit(1)
 }
 const src = readFileSync(bundle, 'utf8')
-for (const token of ['office-root', 'MPS/COR', 'Knowledge graph']) {
+for (const token of [
+  'office-root',
+  'MPS/COR',
+  'Knowledge graph',
+  'MPS/ENI',
+  'MPS/PAS',
+  'ServiceNow',
+  'Salesforce',
+  'Adapters',
+]) {
   if (!src.includes(token)) {
     console.error(`[office-view] bundle missing expected token: ${token}`)
     process.exit(1)
   }
 }
-console.log(`[office-view] check ok · ${bytes} bytes · 23 agents`)
+console.log(`[office-view] check ok · ${bytes} bytes · 23 runtime agents`)

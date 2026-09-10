@@ -1,4 +1,4 @@
-import { DEPTS, LEGEND_ORDER, PHASE_TO_DEPT } from './theme.js'
+import { DEPTS, LEGEND_ORDER, PHASE_TO_DEPT, hostDept } from './theme.js'
 
 export function createHud({ onDept } = {}) {
   const bar = document.createElement('div')
@@ -15,6 +15,7 @@ export function createHud({ onDept } = {}) {
     <div class="office-hud__live"><span class="pip"></span> Live flow</div>
     <div class="office-hud__metrics">
       <div class="metric"><b data-agents>0</b><span>Agents</span></div>
+      <div class="metric live"><b data-live>0</b><span>In progress</span></div>
       <div class="metric"><b data-tasks>0</b><span>Features</span></div>
       <div class="metric"><b data-gates>0</b><span>Gates</span></div>
     </div>
@@ -53,15 +54,19 @@ export function createHud({ onDept } = {}) {
   function render(state, rosterCount) {
     const features = state?.features ?? []
     const busy = new Set((state?.busyAgents ?? []).map((b) => b.agentId)).size
-    bar.querySelector('[data-agents]').textContent = String(busy || rosterCount || 0)
+    bar.querySelector('[data-agents]').textContent = String(rosterCount || busy || 0)
+    bar.querySelector('[data-live]').textContent = String(
+      features.filter((f) => f.state === 'doing' || f.officeTopic).length,
+    )
     bar.querySelector('[data-tasks]').textContent = String(features.length)
     bar.querySelector('[data-gates]').textContent = String(
       features.filter((f) => f.state === 'waiting').length,
     )
     const live = new Set()
     for (const f of features) {
-      if ((f.state === 'doing' || f.state === 'waiting') && PHASE_TO_DEPT[f.phase]) {
-        live.add(PHASE_TO_DEPT[f.phase])
+      if (f.state === 'doing' || f.state === 'waiting' || f.officeTopic) {
+        const host = hostDept(f) || PHASE_TO_DEPT[f.phase]
+        if (host) live.add(host)
       }
     }
     for (const b of state?.busyAgents ?? []) {

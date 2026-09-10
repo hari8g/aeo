@@ -67,6 +67,54 @@ export const DEPTS = {
   },
 }
 
+/** Topic owners that appear on the office floor (pods stay the six MPS departments). */
+export const OWNERS = {
+  gtm: {
+    id: 'gtm',
+    name: 'MPS/GTM',
+    full: 'Go-to-market',
+    chip: '#EADC8F',
+    ink: '#A08A1E',
+    host: 'gtm',
+  },
+  eni: {
+    id: 'eni',
+    name: 'MPS/ENI',
+    full: 'Engineering innovation',
+    chip: '#6EC6E6',
+    ink: '#1F6F8B',
+    host: 'eng',
+  },
+  px: {
+    id: 'px',
+    name: 'MPS/PAx',
+    full: 'Product owners',
+    chip: '#BFA2E3',
+    ink: '#7449A9',
+    host: 'px',
+  },
+  pas: {
+    id: 'pas',
+    name: 'MPS/PAS',
+    full: 'Product architecture & solutions',
+    chip: '#F2B6A0',
+    ink: '#B85C38',
+    host: 'px',
+  },
+}
+
+export function ownerOf(id) {
+  return OWNERS[id] ?? null
+}
+
+export function hostDept(feature) {
+  if (feature?.hostDept && LAYOUT[feature.hostDept]) return feature.hostDept
+  const owner = ownerOf(feature?.owner)
+  if (owner?.id === 'pas' && feature?.phase === 'build') return 'eng'
+  if (owner?.host && LAYOUT[owner.host]) return owner.host
+  return PHASE_TO_DEPT[feature?.phase] ?? 'cor'
+}
+
 /** Audience-facing roster order */
 export const LEGEND_ORDER = ['cor', 'eng', 'px', 'mkt', 'gtm', 'cx']
 

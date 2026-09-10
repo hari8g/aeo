@@ -18,10 +18,10 @@ import { createConnectorBar } from './connectors.js'
 import { createBoard } from './board.js'
 import { startOfficeClient } from './api.js'
 import { createHud } from './hud.js'
-import { PHASE_TO_DEPT } from './theme.js'
-import { mountBadges, projectBadges, updateBadges } from './badges.js'
+import { PHASE_TO_DEPT, hostDept } from './theme.js'
 import { createAmbient, createFlow } from './flow.js'
 import { createInspector } from './inspect.js'
+import { enrichRoster } from './floor.js'
 
 const ISO = new THREE.Vector3(1, 0.92, 1).normalize()
 const CAM_DIST = 220
@@ -51,10 +51,13 @@ function wipeChrome() {
     'office-feed',
     'office-legend',
     'office-inspect',
+    'office-now',
+    'office-topic-floats',
   ]) {
     document.getElementById(id)?.remove()
   }
   document.querySelectorAll('.office-float').forEach((n) => n.remove())
+  document.documentElement.classList.remove('office-io-min')
 }
 
 function boot(rootEl) {
@@ -107,12 +110,13 @@ function boot(rootEl) {
   let roster3d = createRoster(scene, currentRoster, themeName)
   let flyToDept = () => {}
   setPodCounts(pods, countsFromRoster(currentRoster), new Set())
-  const badges = mountBadges(rootEl, { onDept: (id) => flyToDept(id) })
-  updateBadges(badges, currentRoster, { agents: [] })
   const graph = createGraph(scene)
   const spine = createSpine(scene, pods)
   const panel = createPanel({
-    onSelect: (feature) => spine.show(feature),
+    onSelect: (feature) => {
+      flyToDept(hostDept(feature))
+      spine.show(feature)
+    },
     onGate: (feature) => openGate(feature),
   })
   let inspectFocus = null
@@ -135,7 +139,10 @@ function boot(rootEl) {
       spine.show(feature)
     },
   })
-  const connectors = createConnectorBar(scene)
+  let openIo = () => {}
+  const connectors = createConnectorBar(scene, {
+    onSelect: (adapter) => openIo(adapter),
+  })
   const flow = createFlow(scene)
   const hud = createHud({
     onDept: (id) => flyToDept(id),
@@ -154,7 +161,6 @@ function boot(rootEl) {
   const target = new THREE.Vector3(6, 0, 2)
   let liveState = { features: [], agents: [], busyAgents: [] }
   let lastGraph = { nodes: [], links: [], notes: 0 }
-  let lastSpineId = null
 
   function markLegend(deptId) {
     document.querySelectorAll('#office-legend [data-dept]').forEach((btn) => {
@@ -192,12 +198,17 @@ function boot(rootEl) {
       inspect.showGraph(lastGraph, liveState, node)
       return
     }
+    if (inspectFocus.kind === 'io') {
+      inspect.showIo(connectors.get(inspectFocus.id), connectors.list())
+      return
+    }
     inspect.showDept(inspectFocus.id, currentRoster, liveState, lastGraph)
   }
   const ambient = createAmbient(flow, () => ({
     roster: currentRoster,
     state: liveState,
     pulse: (id) => pulseAgent(roster3d, id),
+    pulseIo: (id, dept) => connectors.pulse(id, dept),
   }))
   const camFly = { active: false, fromZ: 0.8, toZ: 0.8, fromT: target.clone(), toT: target.clone(), t: 1 }
   const pan = { down: false, x: 0, y: 0 }
@@ -205,7 +216,7 @@ function boot(rootEl) {
   function frameCamera() {
     const w = rootEl.clientWidth || window.innerWidth
     const h = rootEl.clientHeight || window.innerHeight
-    renderer.setSize(w, h, false)
+    renderer.setSize(w, h)
     const aspect = w / Math.max(1, h)
     const panelPx = w < 980 ? 0 : PANEL_W
     const shift = (panelPx / Math.max(w, 1)) * FR * zoom
@@ -241,6 +252,17 @@ function boot(rootEl) {
     const spec = LAYOUT[id]
     if (spec) focusPoint(spec.pos[0], spec.pos[1], 0.38)
     openDept(id)
+  }
+
+  openIo = (adapter) => {
+    if (!adapter) return
+    const dept = PHASE_TO_DEPT[adapter.phase]
+    const spec = LAYOUT[dept]
+    if (spec) focusPoint(spec.pos[0], spec.pos[1], 0.38)
+    inspectFocus = { kind: 'io', id: adapter.id }
+    highlightPod(pods, dept)
+    markLegend(dept)
+    inspect.showIo(adapter, connectors.list())
   }
 
   overview()
@@ -392,15 +414,14 @@ function boot(rootEl) {
   const client = startOfficeClient({
     onRoster: (data) => {
       if (!data?.agents?.length) return
-      currentRoster = data
+      currentRoster = enrichRoster(data)
       scene.remove(roster3d.group)
       roster3d.group.traverse((o) => {
         if (o.geometry) o.geometry.dispose()
       })
-      roster3d = createRoster(scene, data, themeName)
-      setPodCounts(pods, countsFromRoster(data), liveDeptSet(liveState))
-      updateBadges(badges, data, liveState)
-      hud.render(liveState, data.agents.length)
+      roster3d = createRoster(scene, currentRoster, themeName)
+      setPodCounts(pods, countsFromRoster(currentRoster), liveDeptSet(liveState))
+      hud.render(liveState, currentRoster.agents.length)
       refreshInspect()
     },
     onGraph: (data) => {
@@ -416,25 +437,10 @@ function boot(rootEl) {
       setBusyAgents(
         roster3d,
         (data.busyAgents ?? []).map((b) => b.agentId),
+        liveDeptSet(data),
       )
       setPodCounts(pods, countsFromRoster(currentRoster), liveDeptSet(data))
-      updateBadges(badges, currentRoster, {
-        ...data,
-        agents: (data.busyAgents ?? []).map((b) => ({
-          id: b.agentId,
-          dept: PHASE_TO_DEPT[b.domain],
-          status: 'busy',
-          waitingApproval: (data.features ?? []).some(
-            (f) => f.state === 'waiting' && PHASE_TO_DEPT[f.phase] === PHASE_TO_DEPT[b.domain],
-          ),
-        })),
-      })
       applyGates(data, roster3d)
-      const active = (data.features ?? []).find((f) => f.state === 'doing' || f.state === 'waiting')
-      if (active && active.id !== lastSpineId) {
-        lastSpineId = active.id
-        spine.show(active)
-      }
       refreshInspect()
     },
     onEvent: (event) => {
@@ -465,7 +471,6 @@ function boot(rootEl) {
     ambient.tick(dt, roster3d)
     graph.tick(dt)
     spine.tick(dt, camera, renderer)
-    projectBadges(badges, camera, renderer)
     renderer.render(scene, camera)
     requestAnimationFrame(loop)
   }
@@ -486,8 +491,8 @@ function applySceneTheme(scene, theme) {
 function liveDeptSet(state) {
   const set = new Set()
   for (const f of state?.features ?? []) {
-    if (f.state === 'doing' || f.state === 'waiting') {
-      const dept = PHASE_TO_DEPT[f.phase]
+    if (f.state === 'doing' || f.state === 'waiting' || f.officeTopic) {
+      const dept = hostDept(f) || PHASE_TO_DEPT[f.phase]
       if (dept) set.add(dept)
     }
   }

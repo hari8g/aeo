@@ -1,4 +1,4 @@
-import { DEPTS, PHASE_ORDER, PHASE_TO_DEPT } from './theme.js'
+import { DEPTS, PHASE_ORDER, PHASE_TO_DEPT, ownerOf } from './theme.js'
 
 const PHASE_LABEL = {
   listen: 'Listen',
@@ -24,10 +24,10 @@ export function createPanel({ onSelect, onGate }) {
     <div class="office-panel__head">
       <div class="office-panel__kicker">Task status</div>
       <div class="office-panel__title">Feature journey</div>
-      <div class="office-panel__sub">Listen → Learn · live from the graph</div>
+      <div class="office-panel__sub">Live topics · Listen → Learn</div>
       <div class="office-filters" data-filters>
-        <button type="button" class="on" data-filter="">All</button>
-        <button type="button" data-filter="doing">In progress</button>
+        <button type="button" data-filter="doing" class="on">In progress</button>
+        <button type="button" data-filter="">All</button>
         <button type="button" data-filter="waiting">Waiting</button>
       </div>
       <label class="office-search">
@@ -41,7 +41,7 @@ export function createPanel({ onSelect, onGate }) {
   const list = el.querySelector('.office-panel__list')
   const input = el.querySelector('input')
   let cache = []
-  let chip = ''
+  let chip = 'doing'
 
   el.querySelector('[data-filters]').addEventListener('click', (ev) => {
     const btn = ev.target.closest('[data-filter]')
@@ -60,7 +60,14 @@ export function createPanel({ onSelect, onGate }) {
     const query = q.trim().toLowerCase()
     const features = cache.filter((f) => {
       if (chip && f.state !== chip) return false
-      return !query || String(f.name).toLowerCase().includes(query)
+      return (
+        !query ||
+        [f.name, f.product, f.owner, f.summary]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase()
+          .includes(query)
+      )
     })
     const ordered = [...features].sort((a, b) => rank(a.state) - rank(b.state))
     list.innerHTML = ordered.length
@@ -89,6 +96,7 @@ function rank(state) {
 
 function cardHtml(f) {
   const dept = DEPTS[PHASE_TO_DEPT[f.phase]] ?? DEPTS.cor
+  const owner = ownerOf(f.owner)
   const meta = STATE_META[f.state] ?? STATE_META.next
   const doneN = (f.completedPhases ?? []).length
   const pct = Math.round((doneN / PHASE_ORDER.length) * 100)
@@ -98,16 +106,21 @@ function cardHtml(f) {
     const d = DEPTS[PHASE_TO_DEPT[p]]
     return `<i class="mini ${done || here ? 'on' : ''}" style="background:${done || here ? d.chip : 'rgba(21,20,20,0.12)'}"></i>`
   }).join('')
+  const ownerChip = owner
+    ? `<span class="dept-code" style="--chip:${owner.chip}">${owner.name}</span>`
+    : `<span class="dept" style="--chip:${dept.chip}">${dept.name}</span>`
   return `
-    <button type="button" class="office-card ${f.state}" data-feature="${f.id}">
+    <button type="button" class="office-card ${f.state}${f.officeTopic ? ' topic' : ''}" data-feature="${f.id}">
       <div class="office-card__meta">
         <span class="pill ${meta.tone}">${meta.label}</span>
-        <span class="dept" style="--chip:${dept.chip}">${dept.name} (${dept.full})</span>
+        ${ownerChip}
       </div>
+      ${f.product ? `<span class="office-card__product">${escapeHtml(f.product)}</span>` : ''}
       <span class="office-card__name">${escapeHtml(f.name)}</span>
-      <span class="office-card__path">${PHASE_LABEL[f.phase]} · ${escapeHtml(f.currentStage ?? '')}</span>
+      ${f.summary ? `<span class="office-card__summary">${escapeHtml(f.summary)}</span>` : ''}
+      <span class="office-card__path">${PHASE_LABEL[f.phase]} · ${escapeHtml(f.currentStage ?? '')}${owner ? ` · ${owner.full}` : ` · ${dept.full}`}</span>
       <span class="spine-mini">${dots}</span>
-      <span class="office-card__bar"><i style="width:${pct}%"></i></span>
+      <span class="office-card__bar"><i style="width:${pct}%;background:${owner?.chip ?? dept.chip}"></i></span>
       ${f.state === 'waiting' ? '<span class="await">01 awaiting your decision</span>' : ''}
     </button>
   `

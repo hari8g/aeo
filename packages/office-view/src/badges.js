@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { DEPTS, LAYOUT, PHASE_TO_DEPT } from './theme.js'
+import { projectOverlay } from './project.js'
 
 export function mountBadges(root, { onDept } = {}) {
   let host = root.querySelector('#office-badges')
@@ -38,14 +39,8 @@ export function mountBadges(root, { onDept } = {}) {
 }
 
 export function projectBadges(badges, camera, renderer) {
-  const { width, height } = renderer.domElement
-  const v = new THREE.Vector3()
   for (const node of Object.values(badges.nodes)) {
-    v.copy(node.world).project(camera)
-    const x = (v.x * 0.5 + 0.5) * width
-    const y = (-v.y * 0.5 + 0.5) * height
-    node.el.style.transform = `translate(${x}px, ${y}px) translate(-50%, -100%)`
-    node.el.style.opacity = v.z > 1 ? '0' : '1'
+    projectOverlay(node.world, camera, renderer, node.el, badges.host)
   }
 }
 

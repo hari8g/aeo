@@ -1,7 +1,8 @@
 import * as THREE from 'three'
-import { DEPTS, LAYOUT, hexToInt, lookFor } from './theme.js'
+import { DEPTS, LAYOUT, PHASE_ORDER, PHASE_TO_DEPT, hexToInt, lookFor } from './theme.js'
 import fallbackRoster from './roster.fallback.json'
 import generatedRoster from './roster.generated.json'
+import { enrichRoster } from './floor.js'
 
 function box(w, h, d, color, x, y, z) {
   const m = new THREE.Mesh(
@@ -244,20 +245,36 @@ function makeDesk(theme, chip) {
 }
 
 function slotsFor(spec, n) {
-  const cols = Math.max(2, Math.ceil(Math.sqrt(n)))
+  const cols = n <= 4 ? 2 : 3
   const rows = Math.ceil(n / cols)
+  const gx = 3.4
+  const gz = 3.6
+  const cx = spec.pos[0]
+  const cz = spec.pos[1]
   const out = []
-  const gx = (spec.w - 3.2) / Math.max(1, cols - 1)
-  const gz = (spec.d - 4.2) / Math.max(1, rows - 1)
   for (let i = 0; i < n; i++) {
     const c = i % cols
     const r = Math.floor(i / cols)
+    const rowWidth = Math.min(cols, n - r * cols)
+    const x0 = cx - ((rowWidth - 1) * gx) / 2
+    const z0 = cz - ((rows - 1) * gz) / 2
     out.push({
-      x: spec.pos[0] - (spec.w - 3.2) / 2 + c * gx,
-      z: spec.pos[1] - (spec.d - 4.4) / 2 + r * gz,
+      x: x0 + (i % rowWidth) * gx,
+      z: z0 + r * gz,
     })
   }
   return out
+}
+
+let RING = null
+function ringCurve() {
+  if (RING) return RING
+  const pts = PHASE_ORDER.map((p) => {
+    const pos = LAYOUT[PHASE_TO_DEPT[p]].pos
+    return new THREE.Vector3(pos[0] * 0.62, 0.12, pos[1] * 0.62)
+  })
+  RING = new THREE.CatmullRomCurve3(pts, true, 'catmullrom', 0.55)
+  return RING
 }
 
 function hashSeed(id) {
@@ -271,26 +288,32 @@ export function buildAgents(scene, roster, theme) {
   group.name = 'agents'
   const meshes = new Map()
   const byDept = {}
+  const walkers = []
   for (const a of roster.agents || []) {
-    ;(byDept[a.dept] ||= []).push(a)
+    if (a.walker) walkers.push(a)
+    else (byDept[a.dept] ||= []).push(a)
   }
 
   for (const [deptId, agents] of Object.entries(byDept)) {
     const spec = LAYOUT[deptId]
     if (!spec) continue
     const slots = slotsFor(spec, agents.length)
+    const face = Math.atan2(-spec.pos[0], -spec.pos[1])
     agents.forEach((agent, i) => {
       const look = lookFor(agent.id, i)
       const desk = makeDesk(theme, DEPTS[deptId].chip)
       const chair = makeChair(theme)
       const person = makePerson(look, Boolean(agent.lead), hashSeed(agent.id))
       const slot = slots[i]
-      desk.scale.setScalar(1.35)
-      chair.scale.setScalar(1.35)
-      person.scale.setScalar(1.55)
-      desk.position.set(slot.x, 0.12, slot.z)
-      chair.position.set(slot.x, 0.12, slot.z + 0.95)
-      person.position.set(slot.x, 0.12, slot.z + 0.72)
+      const station = new THREE.Group()
+      station.position.set(slot.x, 0.12, slot.z)
+      station.rotation.y = face
+      desk.scale.setScalar(1.28)
+      chair.scale.setScalar(1.22)
+      person.scale.setScalar(1.62)
+      desk.position.set(0, 0, 0)
+      chair.position.set(0, 0, 0.82)
+      person.position.set(0, 0, 0.62)
       desk.userData = { kind: 'desk', agentId: agent.id, dept: deptId }
       person.userData = {
         ...person.userData,
@@ -299,24 +322,45 @@ export function buildAgents(scene, roster, theme) {
         dept: deptId,
         lead: agent.lead,
         agent,
-        world: new THREE.Vector3(slot.x, 2.4, slot.z + 0.72),
+        home: new THREE.Vector3(slot.x, 0.12, slot.z),
+        world: new THREE.Vector3(slot.x, 2.4, slot.z),
       }
-      group.add(desk, chair, person)
-      meshes.set(agent.id, { desk, person, agent, look })
+      station.add(desk, chair, person)
+      group.add(station)
+      meshes.set(agent.id, { desk, person, agent, look, station })
     })
   }
+
+  walkers.forEach((agent, i) => {
+    const look = lookFor(agent.id, i + 20)
+    const person = makePerson(look, false, hashSeed(agent.id))
+    person.scale.setScalar(1.42)
+    person.userData = {
+      ...person.userData,
+      kind: 'agent',
+      agentId: agent.id,
+      dept: agent.dept,
+      agent,
+      walker: true,
+      u0: i / Math.max(1, walkers.length),
+      world: new THREE.Vector3(),
+    }
+    group.add(person)
+    meshes.set(agent.id, { desk: null, person, agent, look })
+  })
 
   scene.add(group)
   return { group, meshes }
 }
 
 export function loadRosterSync() {
-  return generatedRoster?.agents?.length ? generatedRoster : fallbackRoster
+  const base = generatedRoster?.agents?.length ? generatedRoster : fallbackRoster
+  return enrichRoster(base)
 }
 
 export function createRoster(scene, roster, theme) {
   const name = typeof theme === 'string' ? theme : theme?.cream === 0x151619 ? 'dark' : 'light'
-  const built = buildAgents(scene, roster, name)
+  const built = buildAgents(scene, enrichRoster(roster), name)
   return {
     group: built.group,
     meshes: built.meshes,
@@ -332,13 +376,16 @@ export function pickAgent(roster3d, raycaster) {
   return obj
 }
 
-export function setBusyAgents(roster3d, ids) {
+export function setBusyAgents(roster3d, ids, liveDepts) {
   const set = new Set(ids)
   applyAgentState(roster3d.meshes, {
     agents: [...roster3d.meshes.values()].map((r) => ({
       id: r.agent.id,
       dept: r.agent.dept,
-      status: set.has(r.agent.id) ? 'busy' : 'idle',
+      status:
+        set.has(r.agent.id) || (liveDepts?.has(r.agent.dept) && r.agent.officeExtra)
+          ? 'busy'
+          : 'idle',
     })),
   })
 }
@@ -349,7 +396,7 @@ export function pulseAgent(roster3d, agentId, ms = 2400) {
   rec.person.userData.busy = true
   rec.person.userData.pose = 'type'
   rec.person.userData.pulseUntil = performance.now() + ms
-  const screen = rec.desk.getObjectByName('screen')
+  const screen = rec.desk?.getObjectByName('screen')
   if (screen) screen.material.emissiveIntensity = 0.85
   refreshFace(rec.person)
 }
@@ -367,7 +414,7 @@ export function applyAgentState(meshes, state) {
   const byId = Object.fromEntries((state.agents || []).map((a) => [a.id, a]))
   for (const [id, rec] of meshes) {
     const st = byId[id]
-    const screen = rec.desk.getObjectByName('screen')
+    const screen = rec.desk?.getObjectByName('screen')
     const busy = st?.status === 'busy' || rec.person.userData.pulseUntil > performance.now()
     if (screen) screen.material.emissiveIntensity = busy ? 0.85 : 0.05
     rec.person.userData.busy = busy
@@ -382,7 +429,10 @@ function refreshFace(person) {
   if (!ctx || !look) return
   paintFace(ctx, look, {
     blink: Boolean(person.userData.blink),
-    busy: Boolean(person.userData.busy) || person.userData.pose === 'type',
+    busy:
+      Boolean(person.userData.busy) ||
+      person.userData.pose === 'type' ||
+      Boolean(person.userData.wasTyping),
     wave: person.userData.pose === 'wave',
   })
   person.userData.faceTex.needsUpdate = true
@@ -393,22 +443,48 @@ export function tickAgents(rosterOrMeshes, t, camera) {
   const now = performance.now()
   const cam = new THREE.Vector3()
   if (camera) camera.getWorldPosition(cam)
+  const ring = ringCurve()
   for (const rec of meshes.values()) {
     const person = rec.person
+    const seed = person.userData.seed || 0
+    if (person.userData.walker) {
+      const u = (t * (0.012 + seed * 0.006) + (person.userData.u0 || 0)) % 1
+      const p = ring.getPoint(u)
+      const tan = ring.getTangent(u)
+      person.position.set(p.x, 0.12 + Math.abs(Math.sin(t * 5 + seed * 8)) * 0.04, p.z)
+      person.rotation.y = Math.atan2(tan.x, tan.z)
+      const Lw = person.getObjectByName('armL')
+      const Rw = person.getObjectByName('armR')
+      if (Lw && Rw) {
+        Lw.rotation.x = Math.sin(t * 5 + seed) * 0.4
+        Rw.rotation.x = Math.sin(t * 5 + seed + Math.PI) * 0.4
+      }
+      const headW = person.getObjectByName('head')
+      if (headW) {
+        headW.rotation.y = Math.sin(t * 0.6 + seed * 4) * 0.1
+        headW.position.y = 1.28 + Math.sin(t * 5 + seed) * 0.012
+      }
+      person.userData.world.set(p.x, 2.2, p.z)
+      continue
+    }
     if (person.userData.pulseUntil && now > person.userData.pulseUntil && person.userData.pose === 'type') {
       person.userData.busy = false
       person.userData.pose = 'idle'
-      const screen = rec.desk.getObjectByName('screen')
+      const screen = rec.desk?.getObjectByName('screen')
       if (screen) screen.material.emissiveIntensity = 0.05
       refreshFace(person)
     }
     const L = person.getObjectByName('armL')
     const R = person.getObjectByName('armR')
     const head = person.getObjectByName('head')
-    const seed = person.userData.seed || 0
-    const blink = Math.sin(t * 2.4 + seed * 12) > 0.97
-    if (blink !== person.userData.blink) {
+    const cycle = (t * 0.16 + seed * 17) % 10
+    const burst = cycle < 1.8
+    const typing = person.userData.busy || person.userData.pose === 'type' || burst
+    const glance = cycle > 6.2 && cycle < 6.8
+    const blink = Math.sin(t * 1.6 + seed * 12) > 0.985
+    if (blink !== person.userData.blink || typing !== person.userData.wasTyping) {
       person.userData.blink = blink
+      person.userData.wasTyping = typing
       refreshFace(person)
     }
     if (L && R) {
@@ -416,23 +492,33 @@ export function tickAgents(rosterOrMeshes, t, camera) {
       if (pose === 'wave') {
         L.rotation.x = 0
         R.rotation.x = -1.05 + Math.sin(t * 6) * 0.4
-      } else if (person.userData.busy || pose === 'type') {
-        L.rotation.x = Math.sin(t * 11) * 0.38
-        R.rotation.x = Math.sin(t * 11 + 1.1) * 0.38
+      } else if (typing) {
+        L.rotation.x = Math.sin(t * 6 + seed * 3) * 0.28
+        R.rotation.x = Math.sin(t * 6 + seed * 3 + 1.1) * 0.28
       } else {
-        L.rotation.x = Math.sin(t * 1.4 + seed) * 0.05
-        R.rotation.x = Math.sin(t * 1.4 + seed + 1) * 0.05
+        L.rotation.x = Math.sin(t * 0.9 + seed) * 0.04
+        R.rotation.x = Math.sin(t * 0.9 + seed + 1) * 0.04
       }
     }
+    person.rotation.x = typing ? 0.07 : 0
+    person.position.z = typing ? 0.52 : 0.62
+    const screen = rec.desk?.getObjectByName('screen')
+    if (screen) {
+      screen.material.emissiveIntensity = typing
+        ? 0.28 + Math.sin(t * 6 + seed * 10) * 0.1
+        : 0.05
+    }
     if (head) {
-      if (camera) {
-        const wx = person.position.x
-        const wz = person.position.z
-        head.rotation.y = Math.atan2(cam.x - wx, cam.z - wz)
+      if (glance) {
+        head.rotation.y = Math.sin(t * 0.9 + seed * 6) * 0.55
+      } else if (camera) {
+        const wp = new THREE.Vector3()
+        person.getWorldPosition(wp)
+        head.rotation.y = Math.atan2(cam.x - wp.x, cam.z - wp.z) * 0.35
       } else {
-        head.rotation.y = Math.PI / 4 + Math.sin(t * 0.6 + seed * 8) * 0.08
+        head.rotation.y = Math.PI / 8 + Math.sin(t * 0.7 + seed * 8) * 0.12
       }
-      head.position.y = 1.28 + Math.sin(t * 1.8 + seed * 6) * 0.012
+      head.position.y = 1.28 + Math.sin(t * 2.1 + seed * 6) * 0.016
     }
   }
 }

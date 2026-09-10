@@ -1,4 +1,4 @@
-import { DEPTS, KIND_TO_PHASE, PHASE_ORDER, PHASE_TO_DEPT } from './theme.js'
+import { DEPTS, KIND_TO_PHASE, PHASE_ORDER, PHASE_TO_DEPT, hostDept, ownerOf } from './theme.js'
 
 const PHASE_LABEL = {
   listen: 'Listen',
@@ -105,7 +105,9 @@ export function createInspector({ onSelect, onGate, onClose }) {
     const d = DEPTS[deptId]
     if (!d) return
     const agents = (roster?.agents ?? []).filter((a) => a.dept === deptId)
-    const features = (state?.features ?? []).filter((f) => PHASE_TO_DEPT[f.phase] === deptId)
+    const features = (state?.features ?? []).filter(
+      (f) => PHASE_TO_DEPT[f.phase] === deptId || hostDept(f) === deptId,
+    )
     const busy = new Set((state?.busyAgents ?? []).map((b) => b.agentId))
     const nodes = (graph?.nodes ?? []).filter((n) => PHASE_TO_DEPT[KIND_TO_PHASE[n.kind] ?? ''] === deptId)
     const kinds = {}
@@ -135,6 +137,7 @@ export function createInspector({ onSelect, onGate, onClose }) {
               <div>
                 <strong>${escapeHtml(a.name.replace(/\s+Agent$/i, ''))}</strong>
                 ${a.lead ? '<em>Lead</em>' : ''}
+                ${a.walker ? '<em>Moving</em>' : a.officeExtra ? '<em>Floor</em>' : ''}
                 ${on ? '<em class="live">Live</em>' : ''}
                 <span>${escapeHtml(a.archetype)}</span>
               </div>
@@ -178,15 +181,57 @@ export function createInspector({ onSelect, onGate, onClose }) {
     })
   }
 
-  return { el, hide, showGraph, showDept, isOpen: () => !el.hidden }
+  function showIo(adapter, catalog = []) {
+    if (!adapter) return
+    const d = DEPTS[PHASE_TO_DEPT[adapter.phase]] ?? DEPTS.cor
+    const siblings = catalog.filter((a) => a.phase === adapter.phase)
+    const live = catalog.filter((a) => a.connected_at).length
+    const dir =
+      adapter.io === 'in' ? 'Inbound' : adapter.io === 'out' ? 'Outbound' : 'Bidirectional'
+    el.hidden = false
+    el.innerHTML = `
+      <div class="inspect__head" style="--chip:${d.chip}">
+        <div class="inspect__kicker">I/O · ${dir}</div>
+        <div class="inspect__code">${escapeHtml(adapter.glyph)}</div>
+        <h2>${escapeHtml(adapter.name)}</h2>
+        <p>${escapeHtml(adapter.family)} adapter on ${d.name} · ${PHASE_LABEL[adapter.phase]} — ${
+          adapter.connected_at ? 'live' : 'standby'
+        }.</p>
+        <button type="button" class="inspect__close" data-close>Close</button>
+      </div>
+      <div class="inspect__stats">
+        <div><b>${adapter.io === 'in' ? 'IN' : adapter.io === 'out' ? 'OUT' : 'I/O'}</b><span>${dir}</span></div>
+        <div><b>${siblings.length}</b><span>${PHASE_LABEL[adapter.phase]} tools</span></div>
+        <div><b>${live}</b><span>Live I/O</span></div>
+      </div>
+      <h3>Reads</h3>
+      <p class="inspect__copy">${escapeHtml(adapter.reads)}</p>
+      <h3>Writes</h3>
+      <p class="inspect__copy">${escapeHtml(adapter.writes)}</p>
+      <h3>Same phase · ${d.name}</h3>
+      <ul class="inspect__kinds">
+        ${siblings
+          .map(
+            (a) =>
+              `<li><span>${escapeHtml(a.name)}</span><b>${a.connected_at ? 'live' : 'standby'}</b></li>`,
+          )
+          .join('')}
+      </ul>
+    `
+    el.querySelector('[data-close]')?.addEventListener('click', hide)
+  }
+
+  return { el, hide, showGraph, showDept, showIo, isOpen: () => !el.hidden }
 }
 
 function featureRow(f) {
   const d = DEPTS[PHASE_TO_DEPT[f.phase]] ?? DEPTS.cor
+  const owner = ownerOf(f.owner)
   return `<button type="button" class="inspect__feat" data-feature="${f.id}">
     <span class="pill">${STATE_LABEL[f.state] ?? f.state}</span>
+    ${owner ? `<span class="dept-code" style="--chip:${owner.chip}">${owner.name}</span>` : ''}
     <strong>${escapeHtml(f.name)}</strong>
-    <small>${d.name} · ${PHASE_LABEL[f.phase]} · ${escapeHtml(f.currentStage ?? '')}</small>
+    <small>${owner?.name ?? d.name} · ${PHASE_LABEL[f.phase]} · ${escapeHtml(f.currentStage ?? '')}</small>
   </button>`
 }
 

@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import { LAYOUT, PHASE_ORDER, PHASE_TO_DEPT, hexToInt, phaseColor } from './theme.js'
 import { resetPodDim, setPodDim } from './pods.js'
+import { projectFixed } from './project.js'
 
 export function createSpine(scene, pods) {
   const group = new THREE.Group()
@@ -87,11 +88,8 @@ export function createSpine(scene, pods) {
     const p = curve.getPoint(t)
     light.position.copy(p)
     light.material.emissiveIntensity = 1.6 + Math.sin(performance.now() / 180) * 0.6
-    const rect = renderer.domElement.getBoundingClientRect()
     for (const lab of labels) {
-      const v = lab.world.clone().project(camera)
-      lab.el.style.left = `${((v.x + 1) / 2) * rect.width + rect.left}px`
-      lab.el.style.top = `${((1 - v.y) / 2) * rect.height + rect.top}px`
+      projectFixed(lab.world, camera, renderer, lab.el)
     }
   }
 

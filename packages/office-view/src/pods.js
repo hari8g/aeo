@@ -19,37 +19,43 @@ function roundedBox(w, h, d, r, color) {
 }
 
 function paintHeading(dept) {
-  const W = 1024
-  const H = 300
+  const W = 1600
+  const H = 520
   const canvas = document.createElement('canvas')
   canvas.width = W
   canvas.height = H
   const ctx = canvas.getContext('2d')
   ctx.clearRect(0, 0, W, H)
-  ctx.fillStyle = 'rgba(253,255,248,0.94)'
-  ctx.beginPath()
-  ctx.roundRect(8, 8, W - 16, H - 16, 28)
-  ctx.fill()
-  ctx.strokeStyle = 'rgba(21,20,20,0.10)'
-  ctx.lineWidth = 2
-  ctx.stroke()
-  ctx.beginPath()
-  ctx.fillStyle = dept.chip
-  ctx.arc(72, 150, 16, 0, Math.PI * 2)
-  ctx.fill()
-  ctx.fillStyle = dept.chip
-  ctx.globalAlpha = 0.42
-  ctx.beginPath()
-  ctx.roundRect(48, 28, 820, 128, 24)
-  ctx.fill()
-  ctx.globalAlpha = 1
-  ctx.fillStyle = dept.ink
-  ctx.font = '800 104px Inter, system-ui, sans-serif'
-  ctx.fillText(dept.name, 110, 126)
   ctx.fillStyle = '#151414'
-  ctx.font = '400 52px "Instrument Serif", Georgia, serif'
-  ctx.fillText(dept.full, 110, 226)
+  ctx.beginPath()
+  ctx.roundRect(0, 0, W, H, 36)
+  ctx.fill()
+  ctx.fillStyle = '#FDFFF8'
+  ctx.beginPath()
+  ctx.roundRect(6, 6, W - 12, H - 12, 30)
+  ctx.fill()
+  ctx.fillStyle = dept.chip
+  ctx.fillRect(6, 6, 28, H - 12)
+  ctx.fillStyle = dept.ink
+  ctx.font = '800 188px Inter, system-ui, sans-serif'
+  ctx.textBaseline = 'alphabetic'
+  ctx.fillText(dept.name, 72, 248)
+  ctx.fillStyle = '#151414'
+  ctx.globalAlpha = 0.72
+  ctx.font = '400 86px "Instrument Serif", Georgia, serif'
+  ctx.fillText(dept.full, 74, 400)
+  ctx.globalAlpha = 1
   return canvas
+}
+
+/** Stand the title on the camera-facing side of the pod (iso looks from +X +Z). */
+function plaqueAnchor(spec) {
+  const [x, z] = spec.pos
+  const fx = 0.707
+  const fz = 0.707
+  const reach = (spec.w / 2) * fx + (spec.d / 2) * fz
+  const gap = 3.4
+  return [x + fx * (reach + gap), z + fz * (reach + gap)]
 }
 
 function headingPlaque(dept, spec, deptId) {
@@ -58,33 +64,32 @@ function headingPlaque(dept, spec, deptId) {
   tex.minFilter = THREE.LinearFilter
   tex.magFilter = THREE.LinearFilter
   tex.generateMipmaps = false
-  const w = Math.min(spec.w - 2.2, 9.4)
-  const h = w * (300 / 1024)
+  const w = 16.4
+  const h = w * (520 / 1600)
   const plate = new THREE.Mesh(
-    new THREE.BoxGeometry(w + 0.16, h + 0.16, 0.08),
-    new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5 }),
+    new THREE.BoxGeometry(w + 0.22, h + 0.22, 0.12),
+    new THREE.MeshStandardMaterial({ color: 0x151414, roughness: 0.45 }),
   )
   plate.castShadow = true
   const face = new THREE.Mesh(
     new THREE.PlaneGeometry(w, h),
     new THREE.MeshStandardMaterial({
       map: tex,
-      transparent: true,
-      roughness: 0.38,
+      roughness: 0.32,
       metalness: 0,
+      side: THREE.DoubleSide,
     }),
   )
-  face.position.z = 0.046
-  const g = new THREE.Group()
-  g.add(plate, face)
-  const len = Math.hypot(spec.pos[0], spec.pos[1]) || 1
-  const ux = spec.pos[0] / len
-  const uz = spec.pos[1] / len
-  g.position.set(
-    spec.pos[0] - ux * (Math.min(spec.w, spec.d) * 0.18),
-    0.18 + h / 2,
-    spec.pos[1] - uz * (Math.min(spec.w, spec.d) * 0.18),
+  face.position.z = 0.07
+  const post = new THREE.Mesh(
+    new THREE.BoxGeometry(0.22, 1.15, 0.22),
+    new THREE.MeshStandardMaterial({ color: 0x151414, roughness: 0.6 }),
   )
+  post.position.set(0, -(h / 2) - 0.52, 0)
+  const g = new THREE.Group()
+  g.add(plate, face, post)
+  const [px, pz] = plaqueAnchor(spec)
+  g.position.set(px, 1.15 + h / 2, pz)
   g.rotation.y = Math.PI / 4
   g.userData = { kind: 'heading', dept: deptId }
   g.traverse((o) => {

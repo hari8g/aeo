@@ -1654,6 +1654,8 @@ async function seed() {
   await purgeGraph()
   await seedTollOs(admin?.id)
   await seedStaas(editor?.id)
+  const { ensureOfficeProgressTopics } = await import('../studio/officeTopics.js')
+  await ensureOfficeProgressTopics()
 
   if (admin) {
     await query(`DELETE FROM studio_approvers`)
@@ -1662,7 +1664,7 @@ async function seed() {
   }
 
   console.log(
-    `Demo ready: 2 instances only — (1) ${TOLL_FEATURE} [loop closed] · (2) ${STAAS_FEATURE} [loop closed]`,
+    `Demo ready: (1) ${TOLL_FEATURE} [loop closed] · (2) ${STAAS_FEATURE} [loop closed] · 5 office topics in progress`,
   )
   process.exit(0)
 }

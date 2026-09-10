@@ -31,11 +31,14 @@ export default function OfficePage() {
       document.getElementById('office-feed')?.remove()
       document.getElementById('office-legend')?.remove()
       document.getElementById('office-inspect')?.remove()
+      document.getElementById('office-now')?.remove()
+      document.getElementById('office-topic-floats')?.remove()
       document.getElementById('office-metrics')?.remove()
       document.getElementById('office-badges')?.remove()
       document.querySelectorAll('.office-float').forEach((n) => n.remove())
       document.documentElement.classList.remove('office-dim')
       document.documentElement.classList.remove('office-dark')
+      document.documentElement.classList.remove('office-io-min')
     }
   }, [])
   return <div id="office-root" ref={ref} style={{ position: 'absolute', inset: 0 }} />

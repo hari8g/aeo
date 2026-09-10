@@ -33,6 +33,7 @@ import { ORGANIZATIONAL_LEARNING_MANIFEST } from '@avp/agents-learn-organization
 import { CALIBRATION_MANIFEST } from '@avp/agents-learn-calibration'
 import { query } from '../db/pool.js'
 import type { ContextBus } from '../bus/contextBus.js'
+import { ensureOfficeProgressTopics } from './officeTopics.js'
 
 const DOMAIN_TO_DEPT: Record<string, string> = {
   listen: 'mkt',
@@ -300,6 +301,7 @@ export async function registerOfficeRoutes(
   })
 
   app.get('/studio/office/state', async () => {
+    await ensureOfficeProgressTopics()
     const cycles = await query<{
       id: string
       label: string
@@ -307,19 +309,25 @@ export async function registerOfficeRoutes(
       current_stage: string
       feature_id: number | null
       feature_name: string | null
+      feature_meta: Record<string, unknown> | null
       created_at: Date
       updated_at: Date
     }>(`
       SELECT c.id, c.label, c.status, c.current_stage, c.feature_id,
-             n.label as feature_name, c.created_at, c.updated_at
+             n.label as feature_name, n.metadata as feature_meta,
+             c.created_at, c.updated_at
       FROM cycles c
       LEFT JOIN graph_nodes n ON n.id = c.feature_id
       WHERE c.status = 'active' AND c.current_stage <> 'DONE'
       ORDER BY c.updated_at DESC
     `)
 
-    const featuresOnly = await query<{ id: number; label: string }>(`
-      SELECT id, label FROM graph_nodes WHERE kind='FEATURE'
+    const featuresOnly = await query<{
+      id: number
+      label: string
+      metadata: Record<string, unknown> | null
+    }>(`
+      SELECT id, label, metadata FROM graph_nodes WHERE kind='FEATURE'
     `)
 
     const episodes = await query<{
@@ -398,6 +406,7 @@ export async function registerOfficeRoutes(
           name: c.feature_name ?? c.label,
           stage: c.current_stage,
           closed: false,
+          metadata: c.feature_meta,
           artifacts: artifacts.filter((a) => a.feature_id === fid),
           decisions: decisions.filter((d) => d.feature_id === fid),
           episodes: episodes.filter((e) => e.feature_id === fid),
@@ -421,6 +430,7 @@ export async function registerOfficeRoutes(
           name: f.label,
           stage: c?.current_stage ?? 'INTAKE',
           closed: false,
+          metadata: f.metadata,
           artifacts: artifacts.filter((a) => a.feature_id === f.id),
           decisions: decisions.filter((d) => d.feature_id === f.id),
           episodes: episodes.filter((e) => e.feature_id === f.id),
@@ -464,6 +474,7 @@ function mapFeature(input: {
   name: string
   stage: string
   closed: boolean
+  metadata?: Record<string, unknown> | null
   artifacts: { kind: string; created_at: Date }[]
   decisions: { gate: string; decision: string }[]
   episodes: { domain: string; ts: Date }[]
@@ -506,7 +517,18 @@ function mapFeature(input: {
     dwell[p] = formatDwell(new Date(d.last_ts).getTime() - new Date(d.first_ts).getTime()) ?? ''
   }
 
-  const journey = PHASE_ORDER.filter((p) => completed.has(p) || p === phase)
+  const meta = input.metadata ?? {}
+  const officeTopic = meta.officeTopic === true
+  const owner = typeof meta.owner === 'string' ? meta.owner : null
+  const product = typeof meta.product === 'string' ? meta.product : null
+  const summary = typeof meta.summary === 'string' ? meta.summary : null
+  const extraDone = Array.isArray(meta.completedPhases)
+    ? (meta.completedPhases as string[]).filter((p) => PHASE_ORDER.includes(p))
+    : []
+  for (const p of extraDone) completed.add(p)
+  if (officeTopic) state = 'doing'
+  const hostDept =
+    owner === 'eni' ? 'eng' : owner === 'pas' ? (phase === 'build' ? 'eng' : 'px') : owner === 'gtm' ? 'gtm' : owner === 'px' ? 'px' : null
 
   return {
     id: input.id,
@@ -515,9 +537,14 @@ function mapFeature(input: {
     currentStage: input.stage,
     state,
     completedPhases: [...completed],
-    journey,
+    journey: PHASE_ORDER.filter((p) => completed.has(p) || p === phase),
     dwell,
     gateKind: waitingPortfolio ? 'PORTFOLIO_GATE' : waitingRelease ? 'RELEASE_GATE' : null,
     gateHref: waitingPortfolio ? '/portfolio' : waitingRelease ? '/release' : null,
+    officeTopic,
+    owner,
+    product,
+    summary,
+    hostDept,
   }
 }
